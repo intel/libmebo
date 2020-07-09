@@ -58,7 +58,6 @@ void brc_vp9_compute_qp (VP9RateControlRTC *rtc, VP9FrameParamsQpRTC *frame_para
                          &height);
     cm->width = width;
     cm->height = height;
-    printf ("Layer:%d LayerResolution: %dx%d \n",layer,width,height);
   }
   vp9_set_mb_mi(cm, cm->width, cm->height);
 
@@ -147,8 +146,8 @@ void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig
 
   cpi_->svc.number_spatial_layers = rc_cfg->ss_number_layers;
   cpi_->svc.number_temporal_layers = rc_cfg->ts_number_layers;
-  for (int sl = 0; sl < cpi_->svc.number_spatial_layers; ++sl) {
-    for (int tl = 0; tl < cpi_->svc.number_temporal_layers; ++tl) {
+  for (int sl = 0; sl < (cpi_->svc.number_spatial_layers % VPX_SS_MAX_LAYERS); ++sl) {
+    for (int tl = 0; tl < (cpi_->svc.number_temporal_layers % VPX_TS_MAX_LAYERS); ++tl) {
       const int layer =
           LAYER_IDS_TO_IDX(sl, tl, cpi_->svc.number_temporal_layers);
       LAYER_CONTEXT *lc = &cpi_->svc.layer_context[layer];
@@ -209,10 +208,12 @@ void brc_init_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig *rc_c
 
 VP9RateControlRTC *
 brc_vp9_rate_control_new (VP9RateControlRtcConfig *cfg) {
-   VP9RateControlRTC *rtc = (VP9RateControlRTC*) malloc (sizeof (VP9RateControlRTC));
-   memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
-   brc_init_rate_control (rtc, cfg);
-   return rtc;
+  VP9RateControlRTC *rtc = (VP9RateControlRTC*) malloc (sizeof (VP9RateControlRTC));
+  if (!rtc)
+    return NULL;
+  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
+  brc_init_rate_control (rtc, cfg);
+  return rtc;
 }
 
 VP9RateControlStatus

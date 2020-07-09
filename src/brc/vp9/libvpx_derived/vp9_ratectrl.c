@@ -1005,7 +1005,7 @@ static double get_rate_correction_factor(const VP9_COMP *cpi) {
     else
       rcf = rc->rate_correction_factors[INTER_NORMAL];
   }
-  rcf *= rcf_mult[rc->frame_size_selector];
+  rcf *= rcf_mult[rc->frame_size_selector % FRAME_SCALE_STEPS];
   return fclamp(rcf, MIN_BPB_FACTOR, MAX_BPB_FACTOR);
 }
 
@@ -1014,7 +1014,7 @@ static void set_rate_correction_factor(VP9_COMP *cpi, double factor) {
   const VP9_COMMON *const cm = &cpi->common;
 
   // Normalize RCF to account for the size-dependent scaling factor.
-  factor /= rcf_mult[cpi->rc.frame_size_selector];
+  factor /= rcf_mult[cpi->rc.frame_size_selector % FRAME_SCALE_STEPS];
 
   factor = fclamp(factor, MIN_BPB_FACTOR, MAX_BPB_FACTOR);
 
@@ -1384,7 +1384,7 @@ void vp9_rc_set_frame_target(VP9_COMP *cpi, int target) {
   if (cpi->oxcf.resize_mode == RESIZE_DYNAMIC &&
       rc->frame_size_selector != UNSCALED)
     rc->this_frame_target = (int)(rc->this_frame_target *
-                                  rate_thresh_mult[rc->frame_size_selector]);
+                                  rate_thresh_mult[rc->frame_size_selector % FRAME_SCALE_STEPS]);
 
   // Target rate per SB64 (including partial SB64s.
   rc->sb64_target_rate = (int)(((int64_t)rc->this_frame_target * 64 * 64) /
@@ -1965,7 +1965,7 @@ void vp9_rc_set_gf_interval_range(const VP9_COMP *const cpi,
       const uint32_t pic_breadth =
           VPXMAX(cpi->common.width, cpi->common.height);
       int i;
-      for (i = LEVEL_1; i < LEVEL_MAX; ++i) {
+      for (i = 0; i < VP9_LEVELS; ++i) {
         if (vp9_level_defs[i].max_luma_picture_size >= pic_size &&
             vp9_level_defs[i].max_luma_picture_breadth >= pic_breadth) {
           if (rc->min_gf_interval <=

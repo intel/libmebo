@@ -191,16 +191,17 @@ libmebo_rate_controller_init (LibMeboRateController *rc,
 void
 libmebo_rate_controller_free (LibMeboRateController *rc)
 {
+  if (!rc)
+    return;
+
   LibMeboRateControllerPrivate *priv = (LibMeboRateControllerPrivate *)rc->priv;
 
-  if (rc) {
-    if (rc->priv) {
+  if (rc->priv) {
       brc_vp9_rate_control_free (priv->vp9_rtc);
       free (rc->priv);
       rc->priv = NULL;
-    }
-    free (rc);
   }
+  free (rc);
 }
 
 LibMeboRateController *
@@ -218,8 +219,11 @@ libmebo_rate_controller_new (LibMeboCodecType codec_type) {
     return NULL;
 
   priv = (LibMeboRateControllerPrivate *) malloc (sizeof (LibMeboRateControllerPrivate));
-  if (!priv)
+  if (!priv) {
+    if (rc)
+      free(rc);
     return NULL;
+  }
 
   rc->priv = priv;
   rc->codec_type = codec_type;
