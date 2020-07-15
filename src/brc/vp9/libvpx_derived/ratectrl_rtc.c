@@ -12,7 +12,36 @@
 
 #include "ratectrl_rtc.h"
 
+#undef ERROR
+#define ERROR(str)                  \
+  do {                              \
+    fprintf(stderr, "%s \n", str);	    \
+    return STATUS_BRC_VP9_INVALID_PARAM; \
+  } while (0)
+
+#define RANGE_CHECK(p, memb, lo, hi)                                     \
+  do {                                                                   \
+    if (!(((p)->memb == (lo) || (p)->memb > (lo)) && (p)->memb <= (hi))) \
+      ERROR(#memb " out of range [" #lo ".." #hi "]");                   \
+  } while (0)
+
+#define RANGE_CHECK_HI(p, memb, hi)                                     \
+  do {                                                                  \
+    if (!((p)->memb <= (hi))) ERROR(#memb " out of range [.." #hi "]"); \
+  } while (0)
+
+#define RANGE_CHECK_LO(p, memb, lo)                                     \
+  do {                                                                  \
+    if (!((p)->memb >= (lo))) ERROR(#memb " out of range [" #lo "..]"); \
+  } while (0)
+
+#define RANGE_CHECK_BOOL(p, memb)                                     \
+  do {                                                                \
+    if (!!((p)->memb) != (p)->memb) ERROR(#memb " expected boolean"); \
+  } while (0)
+
 /*===== BRC functions exposed to libs implementation ========= */
+
 
 void brc_vp9_post_encode_update(VP9RateControlRTC *rtc,uint64_t encoded_frame_size) {
   VP9_COMP *cpi_ = &rtc->cpi_;
@@ -220,12 +249,36 @@ VP9RateControlStatus
 brc_vp9_validate (VP9RateControlRtcConfig *cfg)
 {
   VP9RateControlStatus status = STATUS_BRC_VP9_SUCCESS;
-#if 0
-  if (cfg->ss_number_layers > 1)
-    return STATUS_BRC_VP9_UNSUPPORTED_SPATIAL_SVC; 
-  if (cfg->ts_number_layers > 1)
-    return STATUS_BRC_VP9_UNSUPPORTED_TEMPORAL_SVC; 
-#endif
+
+  RANGE_CHECK(cfg, width, 1, 65535);
+  RANGE_CHECK(cfg, height, 1, 65535);
+  RANGE_CHECK_HI(cfg, max_quantizer, 63);
+  RANGE_CHECK_HI(cfg, min_quantizer, cfg->max_quantizer);
+  //RANGE_CHECK(cfg, rc_end_usage, VPX_VBR, VPX_Q);
+  RANGE_CHECK_HI(cfg, undershoot_pct, 100);
+  RANGE_CHECK_HI(cfg, overshoot_pct, 100);
+  RANGE_CHECK(cfg, ss_number_layers, 1, VPX_SS_MAX_LAYERS);
+  RANGE_CHECK(cfg, ts_number_layers, 1, VPX_TS_MAX_LAYERS);
+
+  if (cfg->ss_number_layers * cfg->ts_number_layers > VPX_MAX_LAYERS)
+    ERROR("ss_number_layers * ts_number_layers is out of range");
+
+   if (cfg->ts_number_layers > 1) {
+    unsigned int sl, tl;
+    for (sl = 1; sl < cfg->ss_number_layers; ++sl) {
+      for (tl = 1; tl < cfg->ts_number_layers; ++tl) {
+        const int layer = LAYER_IDS_TO_IDX(sl, tl, cfg->ts_number_layers);
+        if (cfg->layer_target_bitrate[layer] <
+            cfg->layer_target_bitrate[layer - 1])
+          ERROR("ts_target_bitrate entries are not increasing");
+      }
+    }
+
+    RANGE_CHECK(cfg, ts_rate_decimator[cfg->ts_number_layers - 1], 1, 1);
+    for (tl = cfg->ts_number_layers - 2; tl > 0; --tl)
+      if (cfg->ts_rate_decimator[tl - 1] != 2 * cfg->ts_rate_decimator[tl])
+        ERROR("ts_rate_decimator factors are not powers of 2");
+  }
   return status;
 }
 

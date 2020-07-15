@@ -22,8 +22,11 @@
 #include <stdint.h>
 
 typedef enum {
- LIBMEBO_STATUS_FAILED = -1,
- LIBMEBO_STATUS_SUCCESS = 1
+ LIBMEBO_STATUS_SUCCESS,
+ LIBMEBO_STATUS_FAILED,
+ LIBMEBO_STATUS_INVALID_PARAM,
+ LIBMEBO_STATUS_UNSUPPORTED_CODEC,
+
 } LibMeboStatus;
 
 typedef enum {  
@@ -106,8 +109,8 @@ LibMeboStatus libmebo_rate_controller_init (LibMeboRateController *rc,
 
 void libmebo_rate_controller_free (LibMeboRateController *rc);
 
-void libmebo_rate_controller_update_config (LibMeboRateController *rc,
-                                            LibMeboRateControllerConfig*rc_cfg);
+LibMeboStatus libmebo_rate_controller_update_config (LibMeboRateController *rc,
+                                                     LibMeboRateControllerConfig*rc_cfg);
 
 void libmebo_rate_controller_update_frame_size (LibMeboRateController *rc,
                                                 uint64_t encoded_frame_size);

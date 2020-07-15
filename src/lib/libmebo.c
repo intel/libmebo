@@ -62,7 +62,7 @@ vp9_update_config (LibMeboRateControllerConfig* rc_cfg,
       vp9_rtc_config->scaling_factor_den[i] = rc_cfg->scaling_factor_den[i];
       vp9_rtc_config->max_quantizers[i] = rc_cfg->max_quantizers[i];
       vp9_rtc_config->min_quantizers[i] = rc_cfg->min_quantizers[i];
-    }
+  }
 
   // Temporal layer variables.
   vp9_rtc_config->ts_number_layers = rc_cfg->ts_number_layers;
@@ -71,7 +71,17 @@ vp9_update_config (LibMeboRateControllerConfig* rc_cfg,
 
 }
 
-/******** API *************/
+/********************** API *************************/
+
+/**
+ * \brief libmebo_rate_controller_get_loop_filter_level:
+ *
+ * Get the loop filter level for the current frame
+ *
+ * @param[in] rc                   LibMeboRateController to be initialized
+ *
+ * \return Retruns proposed loop filter value for the current frame
+ */
 int
 libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc)
 {
@@ -89,6 +99,15 @@ libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc)
   return lf;
 }
 
+/**
+ * \brief libmebo_rate_controller_get_qp:
+ *
+ * Get the quantization parameter for the current frame
+ *
+ * @param[in] rc                   LibMeboRateController to be initialized
+ *
+ * \return Retruns proposed qp for the current frame
+ */
 int
 libmebo_rate_controller_get_qp(LibMeboRateController *rc)
 {
@@ -106,6 +125,15 @@ libmebo_rate_controller_get_qp(LibMeboRateController *rc)
   return qp;
 }
 
+/**
+ * \brief libmebo_rate_controller_compute_qp:
+ *
+ * Compute the quantization parameter for the current frame
+ *
+ * @param[in] rc                   LibMeboRateController to be initialized
+ * @param[in] rc_frame_params      LibMeboRCFrameParams of current frame
+ *
+ */
 void
 libmebo_rate_controller_compute_qp (LibMeboRateController *rc,
     LibMeboRCFrameParams rc_frame_params)
@@ -125,6 +153,16 @@ libmebo_rate_controller_compute_qp (LibMeboRateController *rc,
   }
 }
 
+/**
+ * \brief libmebo_rate_controller_update_frame_size:
+ *
+ * Update the LibMeboRateConroller instance with
+ * the compressed sized of last encoded frame
+ *
+ * @param[in] rc                   LibMeboRateController to be initialized
+ * @param[in] encoded_frame_size   Size of the last compressed frame
+ *
+ */
 void
 libmebo_rate_controller_update_frame_size (LibMeboRateController *rc,
     uint64_t encoded_frame_size)
@@ -141,23 +179,58 @@ libmebo_rate_controller_update_frame_size (LibMeboRateController *rc,
   }
 }
 
-void
+/**
+ * \brief libmebo_rate_controller_update_config:
+ *
+ * Update the LibMeboRateConroller instance with
+ * brc params in LibMeboRateControllerConfig and returns
+ * LIBMEBO_STATUS_SUCCESS on success
+ *
+ * @param[in] rc           LibMeboRateController to be initialized
+ * @param[in] rc_config    LibMeboRateControllerConfig with brc params
+ *
+ * \return Retrun LibMeboStatus code
+ */
+LibMeboStatus
 libmebo_rate_controller_update_config (LibMeboRateController *rc,
     LibMeboRateControllerConfig* rc_config)
 {
   LibMeboRateControllerPrivate *priv = (LibMeboRateControllerPrivate *)rc->priv;
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   switch (rc->codec_type) {
     case LIBMEBO_CODEC_VP9:
-      vp9_update_config (rc_config, &priv->vp9_rtc_config);
-      brc_vp9_update_rate_control (priv->vp9_rtc, &priv->vp9_rtc_config);
+      {
+        VP9RateControlStatus vp9_status;
+        vp9_update_config (rc_config, &priv->vp9_rtc_config);
+
+        vp9_status = brc_vp9_validate (&priv->vp9_rtc_config);
+	if (vp9_get_libmebo_status (vp9_status) != LIBMEBO_STATUS_SUCCESS)
+          return LIBMEBO_STATUS_INVALID_PARAM;
+
+        brc_vp9_update_rate_control (priv->vp9_rtc, &priv->vp9_rtc_config);
+      }
       break;
 
     default:
+      return LIBMEBO_STATUS_UNSUPPORTED_CODEC; 
       break;
   }
+  return status;
 }
 
+/**
+ * \brief libmebo_rate_controller_init:
+ *
+ * Initialize the LibMeboRateConroller instance with
+ * brc params in LibMeboRateControllerConfig and returns
+ * LIBMEBO_STATUS_SUCCESS on success
+ *
+ * @param[in] rc           LibMeboRateController to be initialized
+ * @param[in] rc_config    LibMeboRateControllerConfig with brc params
+ * 
+ * \return Retrun LibMeboStatus code
+ */
 LibMeboStatus
 libmebo_rate_controller_init (LibMeboRateController *rc,
     LibMeboRateControllerConfig *rc_config)
@@ -173,21 +246,29 @@ libmebo_rate_controller_init (LibMeboRateController *rc,
 
         vp9_status = brc_vp9_validate (&priv->vp9_rtc_config);
 	if (vp9_get_libmebo_status (vp9_status) != LIBMEBO_STATUS_SUCCESS)
-          return LIBMEBO_STATUS_FAILED;
+          return LIBMEBO_STATUS_INVALID_PARAM;
 	
         priv->vp9_rtc = brc_vp9_rate_control_new (&priv->vp9_rtc_config);
         if (!priv->vp9_rtc) {
-          fprintf (stdout, "Failed to Initialize the vp9 brc \n");
+          fprintf (stderr, "Failed to Initialize the vp9 brc \n");
           return LIBMEBO_STATUS_FAILED; 
         }
       }
       break;
     default:
-      return LIBMEBO_STATUS_FAILED; 
+      return LIBMEBO_STATUS_UNSUPPORTED_CODEC; 
   }
   return status;
 }
 
+/**
+ * \brief libmebo_rate_controller_free:
+ *
+ * Frees the @rc and set to NULL
+ *
+ * @param[in] rc LibMeboRateController to be freed.
+ * 
+ */
 void
 libmebo_rate_controller_free (LibMeboRateController *rc)
 {
@@ -202,21 +283,35 @@ libmebo_rate_controller_free (LibMeboRateController *rc)
       rc->priv = NULL;
   }
   free (rc);
+  rc = NULL;
 }
 
+/**
+ * \brief libmebo_rate_controller_new:
+ *
+ * Creates a new LibMeboRateController instance.
+ * It should be freed with libmebo_rate_controller_free()
+ * after the use.
+ *
+ * @param[in] codec_type    LibMeboCodecType for video codec in use
+ * 
+ * \return Retrun the newly created LibMeboRateController instance 
+ */
 LibMeboRateController *
 libmebo_rate_controller_new (LibMeboCodecType codec_type) {
   LibMeboRateController *rc;
   LibMeboRateControllerPrivate *priv;
 
   if (codec_type != LIBMEBO_CODEC_VP9) {
-    fprintf (stdout, "Error: Unsupported Codec!i \n");
+    fprintf (stderr, "Error: Unsupported Codec \n");
     return NULL;
   }
 
   rc = (LibMeboRateController *) malloc (sizeof(LibMeboRateController));
-  if (!rc)
+  if (!rc) {
+    fprintf(stderr, "Failed allocation for LibMeboRateController \n");
     return NULL;
+  }
 
   priv = (LibMeboRateControllerPrivate *) malloc (sizeof (LibMeboRateControllerPrivate));
   if (!priv) {
