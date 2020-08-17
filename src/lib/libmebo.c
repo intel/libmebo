@@ -12,6 +12,9 @@
 #include "libmebo.h"
 #include "brc/vp9/libvpx_derived/ratectrl_rtc.h"
 
+#define GET_LAYER_INDEX(s_layer, t_layer, num_temporal_layers) \
+	((s_layer) * (num_temporal_layers) + (t_layer))
+
 typedef struct {
   VP9RateControlRTC *vp9_rtc;
   VP9RateControlRtcConfig vp9_rtc_config;
@@ -54,21 +57,20 @@ vp9_update_config (LibMeboRateControllerConfig* rc_cfg,
   vp9_rtc_config->max_intra_bitrate_pct = rc_cfg->max_intra_bitrate_pct;
   vp9_rtc_config->framerate = rc_cfg->framerate;
 
-  // Spatial layer variables.
+  // SVC params
   vp9_rtc_config->ss_number_layers = rc_cfg->ss_number_layers;
-  for (int i = 0 ; i<rc_cfg->ss_number_layers; i++) {
-      vp9_rtc_config->layer_target_bitrate[i] = rc_cfg->layer_target_bitrate[i];
-      vp9_rtc_config->scaling_factor_num[i] = rc_cfg->scaling_factor_num[i];
-      vp9_rtc_config->scaling_factor_den[i] = rc_cfg->scaling_factor_den[i];
-      vp9_rtc_config->max_quantizers[i] = rc_cfg->max_quantizers[i];
-      vp9_rtc_config->min_quantizers[i] = rc_cfg->min_quantizers[i];
-  }
-
-  // Temporal layer variables.
   vp9_rtc_config->ts_number_layers = rc_cfg->ts_number_layers;
-  //Fixme: add temporal layer support
-  vp9_rtc_config->ts_rate_decimator[0] = rc_cfg->ts_rate_decimator[0];
-
+  for (int i = 0 ; i<rc_cfg->ss_number_layers; i++) {
+    for (int j = 0 ; j<rc_cfg->ts_number_layers; j++) {
+      int layer = GET_LAYER_INDEX (i, j, rc_cfg->ts_number_layers);
+      vp9_rtc_config->layer_target_bitrate[layer] = rc_cfg->layer_target_bitrate[layer];
+      vp9_rtc_config->scaling_factor_num[layer] = rc_cfg->scaling_factor_num[layer];
+      vp9_rtc_config->scaling_factor_den[layer] = rc_cfg->scaling_factor_den[layer];
+      vp9_rtc_config->max_quantizers[layer] = rc_cfg->max_quantizers[layer];
+      vp9_rtc_config->min_quantizers[layer] = rc_cfg->min_quantizers[layer];
+      vp9_rtc_config->ts_rate_decimator[layer] = rc_cfg->ts_rate_decimator[layer];
+    }
+  }
 }
 
 /********************** API *************************/
