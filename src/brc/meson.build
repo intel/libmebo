@@ -2,6 +2,7 @@ libbrc_sources = [
   'vp9/libvpx_derived/vp9_svc_layercontext.c',
   'vp9/libvpx_derived/vp9_ratectrl.c',
   'vp9/libvpx_derived/ratectrl_rtc.c',
+  'vp9/libvpx_derived/vp9_picklpf.c',
 ]
 
 libbrc_headers = [
@@ -9,6 +10,7 @@ libbrc_headers = [
   'vp9/libvpx_derived/vp9_ratectrl.h',
   'vp9/libvpx_derived/ratectrl_rtc.h',
   'vp9/libvpx_derived/vp9_common.h',
+  'vp9/libvpx_derived/vp9_picklpf.h',
 ]
 
 ldflags = ['-lm']

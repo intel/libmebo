@@ -554,4 +554,5 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used);
 
 void vp9_set_mb_mi(VP9_COMMON *cm, int width, int height);
 
+int16_t vp9_ac_quant (int qindex, int delta, int bit_depth);
 #endif  // LIBMEBO_BRC_VP9_RATECTRL_H

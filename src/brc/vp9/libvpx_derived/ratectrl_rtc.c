@@ -61,13 +61,11 @@ int brc_vp9_get_qp(VP9RateControlRTC *rtc) {
 }
 
 int brc_vp9_get_loop_filter_level(VP9RateControlRTC *rtc) {
-#if 0
+
   VP9_COMP *cpi_ = &rtc->cpi_;
   struct loopfilter *const lf = &cpi_->common.lf;
-  vp9_pick_filter_level(NULL, cpi_, LPF_PICK_FROM_Q);
+  vp9_pick_filter_level(cpi_, LPF_PICK_FROM_Q);
   return lf->filter_level;
-#endif
-  return 0;
 }
 
 void brc_vp9_compute_qp (VP9RateControlRTC *rtc, VP9FrameParamsQpRTC *frame_params) {

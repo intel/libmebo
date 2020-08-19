@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include "vp9_ratectrl.h"
 #include "vp9_svc_layercontext.h"
+#include "vp9_picklpf.h"
 
 #define INVALID_IDX (-1)  // Invalid buffer index.
 
@@ -120,6 +121,8 @@ typedef struct VP9_COMMON {
 
   BITSTREAM_PROFILE profile;
 
+  //LoopFilter params
+  struct loopfilter lf;
 } VP9_COMMON;
 
 typedef struct SPEED_FEATURES {
