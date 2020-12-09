@@ -9,6 +9,13 @@
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
  */
+#include <assert.h>
+#include <limits.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "libmebo.h"
 #include "brc/vp9/libvpx_derived/ratectrl_rtc.h"
 #include "brc/vp8/libvpx_derived/ratectrl_rtc.h"

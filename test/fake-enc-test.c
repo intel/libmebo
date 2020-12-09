@@ -5,7 +5,9 @@
  * sample command:
     ./fake-test --codec=VP9 --preset=0 --framecount=120
 */
+
 #include <stdio.h>
+#include <string.h>
 #include <libmebo.h>
 #include <getopt.h>
 #include <stdlib.h>
