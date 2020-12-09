@@ -129,7 +129,10 @@ void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig
   oxcf->width = rc_cfg->width;
   oxcf->height = rc_cfg->height;
   oxcf->bit_depth = VPX_BITS_8;
-  if (oxcf->init_framerate > 180) oxcf->init_framerate = 30;
+  if (oxcf->init_framerate > 180)
+    oxcf->init_framerate = 30;
+  else
+    oxcf->init_framerate = rc_cfg->framerate;
   oxcf->mode = GOOD;
   oxcf->worst_allowed_q = vp9_quantizer_to_qindex(rc_cfg->max_quantizer);
   oxcf->best_allowed_q = vp9_quantizer_to_qindex(rc_cfg->min_quantizer);
