@@ -315,7 +315,7 @@ void brc_vp8_update_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig
   cm->refresh_golden_frame = 0;
   cm->refresh_last_frame = 1;
 
-  cpi_->ref_framerate = cpi_->framerate;
+  cpi_->ref_framerate = cpi_->framerate = rc_cfg->framerate;
   cpi_->ref_frame_flags = VP8_ALTR_FRAME | VP8_GOLD_FRAME | VP8_LAST_FRAME;
 
   //Fill VP8_CONFIG
