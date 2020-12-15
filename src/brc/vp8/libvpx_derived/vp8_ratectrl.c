@@ -1286,15 +1286,14 @@ int vp8_regulate_q(VP8_COMP *cpi, int target_bits_per_frame) {
       }
     } while (++i <= cpi->active_worst_quality);
 
+#if 0
+    //Fixme:
     /* If we are at MAXQ then enable Q over-run which seeks to claw
      * back additional bits through things like the RD multiplier
      * and zero bin size.
      */
     if (Q >= VP8_MAXQ) {
       int zbin_oqmax;
-
-      double Factor = 0.99;
-      double factor_adjustment = 0.01 / 256.0;
 
       if (cpi->common.frame_type == VP8_KEY_FRAME) {
         zbin_oqmax = 0;
@@ -1311,6 +1310,7 @@ int vp8_regulate_q(VP8_COMP *cpi, int target_bits_per_frame) {
       //Fixeme?: removed cpi->mb.zbin_over_quant << zbin_oqmax
       //
     }
+#endif
   }
 
   // Limit decrease in Q for 1 pass CBR screen content mode.

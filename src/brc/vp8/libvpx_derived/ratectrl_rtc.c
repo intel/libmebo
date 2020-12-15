@@ -10,7 +10,7 @@
  */
 
 #include "ratectrl_rtc.h"
-
+#include "vp8_ratectrl.h"
 #define LAYER_IDS_TO_IDX(sl, tl, num_tl) ((sl) * (num_tl) + (tl))
 
 #undef ERROR
@@ -94,17 +94,13 @@ int brc_vp8_get_loop_filter_level(VP8RateControlRTC *rtc) {
 void brc_vp8_compute_qp (VP8RateControlRTC *rtc, VP8FrameParamsQpRTC *frame_params) {
   VP8_COMP *cpi_ = &rtc->cpi_;
   VP8_COMMON *const cm = &cpi_->common;
-  int width, height;
   int Q;
   int frame_over_shoot_limit;
   int frame_under_shoot_limit;
-  int q_low;
-  int q_high;
-  int top_index;
-  int bottom_index;
-  int overshoot_seen = 0;
-  int undershoot_seen = 0;
-  int active_worst_qchanged = 0;
+
+  //Fixme: Add rate_correction_factor support based on active_worst_qchanged
+  //vp8_update_rate_correction_factors(cpi, 2);
+  //int active_worst_qchanged = 0;
 
   cm->frame_type = frame_params->frame_type;
 
@@ -166,11 +162,14 @@ void brc_vp8_compute_qp (VP8RateControlRTC *rtc, VP8FrameParamsQpRTC *frame_para
   vp8_compute_frame_size_bounds(cpi_, &frame_under_shoot_limit,
                                 &frame_over_shoot_limit);
 
+#if 0
+  //Fixme: Add rate_correction_factor() code
   /* Limit Q range for the adaptive loop. */
   bottom_index = cpi_->active_best_quality;
   top_index = cpi_->active_worst_quality;
   q_low = cpi_->active_best_quality;
   q_high = cpi_->active_worst_quality;
+#endif
 
   cm->base_qindex = Q;
 
@@ -214,14 +213,14 @@ void brc_vp8_compute_qp (VP8RateControlRTC *rtc, VP8FrameParamsQpRTC *frame_para
         over_size_percent = (int)(over_size_percent * 0.96);
       }
 #if !CONFIG_REALTIME_ONLY
-      top_index = cpi_->active_worst_quality;
+      //top_index = cpi_->active_worst_quality;
 #endif  // !CONFIG_REALTIME_ONLY
       /* If we have updated the active max Q do not call
        * vp8_update_rate_correction_factors() this loop.
        */
-      active_worst_qchanged = 1;
+      //active_worst_qchanged = 1;
   } else {
-      active_worst_qchanged = 0;
+      //active_worst_qchanged = 0;
   }
 
   //Fixme1:
@@ -546,8 +545,6 @@ void brc_vp8_update_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig
 
 void brc_vp8_init_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig *rc_cfg) {
   VP8_COMP *cpi_ = &rtc->cpi_;
-  VP8_COMMON *cm = &cpi_->common;
-  VP8_CONFIG *oxcf = &cpi_->oxcf;
 
   cpi_->baseline_gf_interval = DEFAULT_GF_INTERVAL;
 
