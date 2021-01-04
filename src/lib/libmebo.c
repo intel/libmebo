@@ -19,6 +19,7 @@
 #include "libmebo.h"
 #include "brc/vp9/libvpx_derived/ratectrl_rtc.h"
 #include "brc/vp8/libvpx_derived/ratectrl_rtc.h"
+#include "brc/av1/aom_derived/ratectrl_rtc.h"
 
 #define GET_LAYER_INDEX(s_layer, t_layer, num_temporal_layers) \
 	((s_layer) * (num_temporal_layers) + (t_layer))
@@ -35,6 +36,12 @@ typedef union {
     VP8RateControlRtcConfig vp8_rtc_config;
     VP8FrameParamsQpRTC vp8_frame_params;
   }vp8;
+
+  struct {
+    AV1RateControlRTC *av1_rtc;
+    AV1RateControlRtcConfig av1_rtc_config;
+    AV1FrameParamsQpRTC av1_frame_params;
+  }av1;
 
 } LibMeboRateControllerPrivate;
 
@@ -61,6 +68,22 @@ vp8_get_libmebo_status (VP8RateControlStatus status)
 
   switch (status) {
     case STATUS_BRC_VP8_SUCCESS:
+      libmebo_status = LIBMEBO_STATUS_SUCCESS;
+      break;
+    default:
+      libmebo_status = LIBMEBO_STATUS_FAILED;
+      break;
+  }
+  return libmebo_status;
+}
+
+LibMeboStatus
+av1_get_libmebo_status (AV1RateControlStatus status)
+{
+  LibMeboStatus libmebo_status = LIBMEBO_STATUS_FAILED;
+
+  switch (status) {
+    case STATUS_BRC_AV1_SUCCESS:
       libmebo_status = LIBMEBO_STATUS_SUCCESS;
       break;
     default:
@@ -141,6 +164,41 @@ vp8_update_config (LibMeboRateControllerConfig* rc_cfg,
   }
 }
 
+static void
+av1_update_config (LibMeboRateControllerConfig* rc_cfg,
+    AV1RateControlRtcConfig *av1_rtc_config)
+{
+  memset (av1_rtc_config, 0, sizeof (AV1RateControlRtcConfig));
+
+  av1_rtc_config->width = rc_cfg->width;
+  av1_rtc_config->height = rc_cfg->height;
+  av1_rtc_config->max_quantizer = rc_cfg->max_quantizer;
+  av1_rtc_config->min_quantizer = rc_cfg->min_quantizer;
+  av1_rtc_config->target_bandwidth = rc_cfg->target_bandwidth;
+  av1_rtc_config->buf_initial_sz = rc_cfg->buf_initial_sz;
+  av1_rtc_config->buf_optimal_sz = rc_cfg->buf_optimal_sz;
+  av1_rtc_config->buf_sz = rc_cfg->buf_sz;
+  av1_rtc_config->undershoot_pct = rc_cfg->undershoot_pct;
+  av1_rtc_config->overshoot_pct = rc_cfg->overshoot_pct;
+  av1_rtc_config->max_intra_bitrate_pct = rc_cfg->max_intra_bitrate_pct;
+  av1_rtc_config->framerate = rc_cfg->framerate;
+
+  // SVC params
+  av1_rtc_config->ss_number_layers = rc_cfg->ss_number_layers;
+  av1_rtc_config->ts_number_layers = rc_cfg->ts_number_layers;
+  for (int i = 0 ; i<rc_cfg->ss_number_layers; i++) {
+    for (int j = 0 ; j<rc_cfg->ts_number_layers; j++) {
+      int layer = GET_LAYER_INDEX (i, j, rc_cfg->ts_number_layers);
+      av1_rtc_config->layer_target_bitrate[layer] = rc_cfg->layer_target_bitrate[layer];
+      av1_rtc_config->scaling_factor_num[layer] = rc_cfg->scaling_factor_num[layer];
+      av1_rtc_config->scaling_factor_den[layer] = rc_cfg->scaling_factor_den[layer];
+      av1_rtc_config->max_quantizers[layer] = rc_cfg->max_quantizers[layer];
+      av1_rtc_config->min_quantizers[layer] = rc_cfg->min_quantizers[layer];
+      av1_rtc_config->ts_rate_decimator[layer] = rc_cfg->ts_rate_decimator[layer];
+    }
+  }
+}
+
 /********************** API *************************/
 
 /**
@@ -164,6 +222,9 @@ libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc)
       break;
     case LIBMEBO_CODEC_VP8:
       lf = brc_vp8_get_loop_filter_level (priv->vp8.vp8_rtc);
+      break;
+    case LIBMEBO_CODEC_AV1:
+      lf = brc_av1_get_loop_filter_level (priv->av1.av1_rtc);
       break;
 
     default:
@@ -193,6 +254,9 @@ libmebo_rate_controller_get_qp(LibMeboRateController *rc)
       break;
     case LIBMEBO_CODEC_VP8:
       qp = brc_vp8_get_qp (priv->vp8.vp8_rtc);
+      break;
+    case LIBMEBO_CODEC_AV1:
+      qp = brc_av1_get_qp (priv->av1.av1_rtc);
       break;
 
     default:
@@ -229,6 +293,12 @@ libmebo_rate_controller_compute_qp (LibMeboRateController *rc,
       priv->vp8.vp8_frame_params.temporal_layer_id = rc_frame_params.temporal_layer_id;
       brc_vp8_compute_qp (priv->vp8.vp8_rtc, &priv->vp8.vp8_frame_params);
       break;
+    case LIBMEBO_CODEC_AV1:
+      priv->av1.av1_frame_params.frame_type = rc_frame_params.frame_type;
+      priv->av1.av1_frame_params.spatial_layer_id = rc_frame_params.spatial_layer_id;
+      priv->av1.av1_frame_params.temporal_layer_id = rc_frame_params.temporal_layer_id;
+      brc_av1_compute_qp (priv->av1.av1_rtc, &priv->av1.av1_frame_params);
+      break;
 
     default:
       break;
@@ -257,6 +327,9 @@ libmebo_rate_controller_update_frame_size (LibMeboRateController *rc,
       break;
     case LIBMEBO_CODEC_VP8:
       brc_vp8_post_encode_update (priv->vp8.vp8_rtc, encoded_frame_size);
+      break;
+    case LIBMEBO_CODEC_AV1:
+      brc_av1_post_encode_update (priv->av1.av1_rtc, encoded_frame_size);
       break;
 
     default:
@@ -306,6 +379,18 @@ libmebo_rate_controller_update_config (LibMeboRateController *rc,
           return LIBMEBO_STATUS_INVALID_PARAM;
 
         brc_vp8_update_rate_control (priv->vp8.vp8_rtc, &priv->vp8.vp8_rtc_config);
+      }
+      break;
+    case LIBMEBO_CODEC_AV1:
+      {
+        AV1RateControlStatus av1_status;
+        av1_update_config (rc_config, &priv->av1.av1_rtc_config);
+
+        av1_status = brc_av1_validate (&priv->av1.av1_rtc_config);
+        if (av1_get_libmebo_status (av1_status) != LIBMEBO_STATUS_SUCCESS)
+          return LIBMEBO_STATUS_INVALID_PARAM;
+
+        brc_av1_update_rate_control (priv->av1.av1_rtc, &priv->av1.av1_rtc_config);
       }
       break;
 
@@ -368,6 +453,22 @@ libmebo_rate_controller_init (LibMeboRateController *rc,
         }
       }
       break;
+    case LIBMEBO_CODEC_AV1:
+      {
+        AV1RateControlStatus av1_status;
+        av1_update_config (rc_config, &priv->av1.av1_rtc_config);
+
+        av1_status = brc_av1_validate (&priv->av1.av1_rtc_config);
+        if (av1_get_libmebo_status (av1_status) != LIBMEBO_STATUS_SUCCESS)
+          return LIBMEBO_STATUS_INVALID_PARAM;
+
+        priv->av1.av1_rtc = brc_av1_rate_control_new (&priv->av1.av1_rtc_config);
+        if (!priv->av1.av1_rtc) {
+          fprintf (stderr, "Failed to Initialize the av1 brc \n");
+          return LIBMEBO_STATUS_FAILED; 
+        }
+      }
+      break;
     default:
       return LIBMEBO_STATUS_UNSUPPORTED_CODEC; 
   }
@@ -401,6 +502,10 @@ libmebo_rate_controller_free (LibMeboRateController *rc)
            brc_vp8_rate_control_free (priv->vp8.vp8_rtc);
            free (rc->priv);
            rc->priv = NULL;
+         case LIBMEBO_CODEC_AV1:
+           brc_av1_rate_control_free (priv->av1.av1_rtc);
+           free (rc->priv);
+           rc->priv = NULL;
 	 break;
 	 default:
 	 break;
@@ -426,7 +531,9 @@ libmebo_rate_controller_new (LibMeboCodecType codec_type) {
   LibMeboRateController *rc;
   LibMeboRateControllerPrivate *priv;
 
-  if (codec_type != LIBMEBO_CODEC_VP9 && codec_type != LIBMEBO_CODEC_VP8) {
+  if (codec_type != LIBMEBO_CODEC_VP9 &&
+      codec_type != LIBMEBO_CODEC_VP8 &&
+      codec_type != LIBMEBO_CODEC_AV1) {
     fprintf (stderr, "Error: Unsupported Codec \n");
     return NULL;
   }
