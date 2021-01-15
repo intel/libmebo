@@ -3,7 +3,7 @@
  *  Author: Sreerenj Balachandran <sreerenj.balachandran@intel.com>
  *
  * sample command:
-    ./fake-test --codec=VP9 --preset=0 --framecount=120
+    ./fake-enc --codec=VP9 --preset=0 --framecount=120
 */
 
 #include <stdio.h>
@@ -20,6 +20,7 @@ typedef enum CodecID
 {
   VP8_ID = 0,
   VP9_ID = 1,
+  AV1_ID = 2,
 } CodecID;
 
 struct EncParams {
@@ -90,6 +91,8 @@ get_codec_id_string (CodecID id)
       return "VP8";
     case VP9_ID:
       return "VP9";
+    case AV1_ID:
+      return "AV1";
     default:
       return "Unknown";
   }
@@ -98,7 +101,7 @@ get_codec_id_string (CodecID id)
 static void show_help()
 {
   printf("Usage: \n"
-		  "  fake-enc [--codec=VP8|VP9] [--framecount=frame count] "
+		  "  fake-enc [--codec=VP8|VP9|AV1] [--framecount=frame count] "
 		  "[--preset= 1 to 10] \n"
 		  "    Preset0: QVGA_256kbps_30fps \n"
 		  "    Preset1: QVGA_512kbps_30fps \n"
@@ -141,8 +144,10 @@ parse_args(int argc, char **argv)
       case 1:
 	if (!strcmp (optarg, "VP8"))
 	  enc_params.id = VP8_ID;
-	else
+	else if (!strcmp (optarg, "VP9"))
 	  enc_params.id = VP9_ID;
+	else
+	  enc_params.id = AV1_ID;
         break;
       case 2: {
 	  int preset = atoi(optarg);
