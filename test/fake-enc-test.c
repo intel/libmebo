@@ -31,6 +31,7 @@ struct EncParams {
   unsigned int width;
   unsigned int height;
   unsigned int framecount; //Number of Frames to be encoded
+  unsigned int num_tl; //Number of Temporal Layers
 };
 
 struct BitrateBounds {
@@ -48,6 +49,7 @@ static struct EncParams enc_params =
     .width = 320,
     .height = 240,
     .framecount = 100,
+    .num_tl = 1,
   };
 
 static struct EncParams preset_list [] = {
@@ -81,6 +83,13 @@ static struct BitrateBounds bitrate_bounds_inter [] = {
 	{3100,8500}, {14100,16500}, {30000,35600}, //full_hd-inter-frames
 };
 
+#define MaxSpatialLayers 3
+#define MaxTemporalLayers 3
+int layered_bitrates[MaxSpatialLayers][MaxTemporalLayers];
+int layered_frame_rate[MaxTemporalLayers];
+int layered_stream_size[MaxSpatialLayers][MaxTemporalLayers];
+int layered_frame_count[MaxTemporalLayers];
+
 static int verbose = 0;
 
 static char*
@@ -102,6 +111,7 @@ static void show_help()
 {
   printf("Usage: \n"
 		  "  fake-enc [--codec=VP8|VP9|AV1] [--framecount=frame count] "
+		  "[--temporal-layers=Numer of Temporal Layers] "
 		  "[--preset= 1 to 10] \n"
 		  "    Preset0: QVGA_256kbps_30fps \n"
 		  "    Preset1: QVGA_512kbps_30fps \n"
@@ -128,7 +138,8 @@ parse_args(int argc, char **argv)
         {"codec", required_argument, 0, 1},
         {"preset", required_argument, 0, 2},
         {"framecount", required_argument, 0, 3},
-        {"verbose", required_argument, 0, 4},
+        {"temporal-layers", required_argument, 0, 4},
+        {"verbose", required_argument, 0, 5},
         { NULL,  0, NULL, 0 }
   };
 
@@ -154,7 +165,7 @@ parse_args(int argc, char **argv)
 	  CodecID id = enc_params.id;
           if (preset < 0 || preset > 11) {
             printf ("Unknown preset, Failed \n");
-	    exit(0);
+            exit(0);
 	  }
 	  enc_params = preset_list[preset];
 	  enc_params.id = id;
@@ -164,6 +175,9 @@ parse_args(int argc, char **argv)
         enc_params.framecount = atoi(optarg);
 	break;
       case 4:
+        enc_params.num_tl = atoi(optarg);
+	break;
+      case 5:
         verbose = atoi(optarg);
 	break;
       default:
@@ -194,6 +208,39 @@ uint32_t MaxSizeOfKeyframeAsPercentage(uint32_t optimal_buffer_size,
           return kMinIntraSizePercentage;
   else
           return target_size_kbyte_as_percent;
+}
+
+static void
+InitLayeredBitrateAlloc (int num_sl,
+    int num_tl, int bitrate)
+{
+  int sl, tl;
+  //Fixme: No spatial allocation yet
+  for (sl=0; sl<num_sl; sl++) {
+    for (tl=0; tl<num_tl; tl++) {
+      layered_bitrates[sl][tl] = bitrate/num_tl;
+    }
+  }
+}
+
+static void
+InitLayeredFramerate (int num_tl, int framerate,
+                      int *ts_rate_decimator)
+{
+  for (int tl = 0; tl < num_tl; tl++) {
+    if (tl == 0)
+      layered_frame_rate [tl] = framerate / ts_rate_decimator[tl];
+    else
+      layered_frame_rate [tl] =
+        (framerate / ts_rate_decimator[tl]) -
+		  (framerate / ts_rate_decimator[tl-1]);
+  }
+}
+
+static int
+GetBitratekBps (int sl_id, int tl_id)
+{
+  return layered_bitrates[sl_id][tl_id];
 }
 
 static int
@@ -229,11 +276,25 @@ libmebo_software_brc_init (
   rc_config->scaling_factor_den[0] = 1;
   rc_config->max_quantizers[0] = rc_config->max_quantizer;
   rc_config->min_quantizers[0] = rc_config->min_quantizer;
-  rc_config->layer_target_bitrate[0] = rc_config->target_bandwidth;
 
   // Temporal layer variables.
-  rc_config->ts_number_layers = 1;
-  rc_config->ts_rate_decimator[0] = 1;
+  if (enc_params.num_tl > 1) {
+    int bitrate_sum = 0;
+    rc_config->ts_number_layers = enc_params.num_tl;
+    for (int ti = 0; ti < enc_params.num_tl; ti++) {
+      rc_config->max_quantizers[ti] = rc_config->max_quantizer;
+      rc_config->min_quantizers[ti] = rc_config->min_quantizer;
+      bitrate_sum += GetBitratekBps(0, ti);
+      rc_config->layer_target_bitrate[ti] = bitrate_sum;
+      rc_config->ts_rate_decimator[ti] = 1u << (enc_params.num_tl - ti - 1);
+    }
+    InitLayeredFramerate (enc_params.num_tl,enc_params.framerate,
+		    rc_config->ts_rate_decimator);
+  } else {
+    rc_config->ts_number_layers = 1;
+    rc_config->ts_rate_decimator[0] = 1;
+    rc_config->layer_target_bitrate[0] = rc_config->target_bandwidth;
+  }
 
   status = libmebo_rate_controller_init (rc, rc_config);
   if (status != LIBMEBO_STATUS_SUCCESS)
@@ -257,11 +318,32 @@ static void display_encode_status (unsigned int bitstream_size) {
 		  enc_params.width,
 		  enc_params.height,
 		  enc_params.framecount);
-
+  if (enc_params.num_tl > 1) {
+    int bitrate = 0;
+    printf (	  "Target bitrates (s0t0, s0t0+s0t1, s0t0+s0t1+s0t2, etc) in kbps:  ");
+    for (int tl = 0; tl <enc_params.num_tl; tl++) {
+      bitrate += layered_bitrates[0][tl];
+      printf ("%d ",bitrate);
+    }
+    printf ("\n");
+  }
   printf ("\n======= Encode Staus Report ======= \n");
   printf ("Bitrate of the Compressed stream = %d kbps\n",
 		   (((bitstream_size / enc_params.framecount) *
-		     enc_params.framerate)*8)/1000);
+		     enc_params.framerate) * 8 ) / 1000);
+  if (enc_params.num_tl > 1) {
+    int total_bitrate = 0;
+    for (int tl = 0; tl <enc_params.num_tl; tl++) {
+      int bitrate = 0;
+      bitrate = (((layered_stream_size [0][tl] / layered_frame_count[tl]) *
+                   layered_frame_rate[tl]) * 8) / 1000;
+      total_bitrate += bitrate;
+      printf ("TemporlLayer[%d]: \n"
+              "  Bitrate (with out including any other layers)     = %d kbps \n"
+              "  Bitrate (accumulated the lower layer targets)     = %d kbps \n",
+	      tl, bitrate, total_bitrate);
+    }
+  }
   printf ("\n");
 }
 
@@ -302,7 +384,29 @@ start_virtual_encode (LibMeboRateController *rc)
 
      rc_frame_params.frame_type = libmebo_frame_type;
      rc_frame_params.spatial_layer_id = 0;
-     rc_frame_params.temporal_layer_id = 0;
+     if (enc_params.num_tl > 1) {
+       switch (enc_params.num_tl) {
+         case 2:
+	   if (i % 2 == 0)
+             rc_frame_params.temporal_layer_id = 0;
+	   else
+             rc_frame_params.temporal_layer_id = 1;
+           break;
+         case 3:
+	   if (i % 4 == 0)
+             rc_frame_params.temporal_layer_id = 0;
+	   else if (i % 2 == 0)
+             rc_frame_params.temporal_layer_id = 1;
+	   else
+             rc_frame_params.temporal_layer_id = 2;
+           break;
+         default:
+           printf ("Exit: Not supporting more than 3 temporal layers \n");
+           exit(0);
+       }
+     } else {
+       rc_frame_params.temporal_layer_id = 0;
+     }
 
      libmebo_rate_controller_compute_qp (rc, rc_frame_params);
 
@@ -324,6 +428,19 @@ start_virtual_encode (LibMeboRateController *rc)
        printf ("PostEncodeBufferSize = %d \n",buf_size);
      total_size += buf_size;
 
+     // Calculate per layer stream size
+     if (enc_params.num_tl >1) {
+       layered_stream_size[0][rc_frame_params.temporal_layer_id] +=
+           buf_size;
+       layered_frame_count[rc_frame_params.temporal_layer_id] += 1;
+       if (verbose) {
+         printf ("PostEncodeBufferSize of"
+             "temporal_layer[%d]  = %d \n",
+	     rc_frame_params.temporal_layer_id,
+	     buf_size);
+       }
+     }
+
      libmebo_rate_controller_update_frame_size (rc, buf_size);
    }
 
@@ -341,6 +458,8 @@ int main (int argc,char **argv)
   }
   parse_args(argc, (char **)argv);
 
+  //Init layered bitrate allocation estimation
+  InitLayeredBitrateAlloc (1, enc_params.num_tl,enc_params.bitrate);
 
   //Create the rate-controller
   libmebo_rc = libmebo_rate_controller_new (enc_params.id);
