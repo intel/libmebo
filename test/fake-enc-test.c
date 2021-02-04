@@ -36,6 +36,7 @@ struct EncParams {
   unsigned int framecount; //Number of Frames to be encoded
   unsigned int num_sl; //Number of Spatial Layers
   unsigned int num_tl; //Number of Temporal Layers
+  unsigned int dynamic_rate_change; //dynamic rate change enablement flag
 };
 
 struct BitrateBounds {
@@ -60,22 +61,24 @@ static struct EncParams enc_params =
     .framecount = 100,
     .num_sl = 1,
     .num_tl = 1,
+    .dynamic_rate_change = 0,
   };
 
 static struct EncParams preset_list [] = {
-	{0, 1, 256, 30, 320, 240, 100, 1, 1},
-	{1, 1, 512, 30, 320, 240, 100, 1, 1},
-	{2, 1, 1024, 30, 320, 240, 100, 1, 1},
-	{3, 1, 256, 30, 640, 480, 100, 1, 1},
-	{4, 1, 512, 30, 640, 480, 100, 1, 1},
-	{5, 1, 1024, 30, 640, 480, 100, 1, 1},
-	{6, 1, 1024, 30, 1280, 720, 100, 1, 1},
-	{7, 1, 2048, 30, 1280, 720, 100, 1, 1},
-	{8, 1, 4096, 30, 1280, 720, 100, 1, 1},
-	{9, 1, 1024, 30, 1920, 1080, 100, 1, 1},
-	{10, 1, 4096, 30, 1920, 1080, 100, 1, 1},
-	{11, 1, 8192, 30, 1920, 1080, 100,1, 1},
-	{12, 1, 4096, 30, 1280, 720, 100, 3, 2},
+	{0, 1, 256, 30, 320, 240, 100, 1, 1, 0},
+	{1, 1, 512, 30, 320, 240, 100, 1, 1, 0},
+	{2, 1, 1024, 30, 320, 240, 100, 1, 1, 0},
+	{3, 1, 256, 30, 640, 480, 100, 1, 1, 0},
+	{4, 1, 512, 30, 640, 480, 100, 1, 1, 0},
+	{5, 1, 1024, 30, 640, 480, 100, 1, 1, 0},
+	{6, 1, 1024, 30, 1280, 720, 100, 1, 1, 0},
+	{7, 1, 2048, 30, 1280, 720, 100, 1, 1, 0},
+	{8, 1, 4096, 30, 1280, 720, 100, 1, 1, 0},
+	{9, 1, 1024, 30, 1920, 1080, 100, 1, 1, 0},
+	{10, 1, 4096, 30, 1920, 1080, 100, 1, 1, 0},
+	{11, 1, 8192, 30, 1920, 1080, 100,1, 1, 0},
+	{12, 1, 8192, 30, 1920, 1080, 100,1, 1, 1},
+	{13, 1, 4096, 30, 1280, 720, 100, 3, 2, 0},
 };
 
 //heuristics to predict a decent key/intra-frame size
@@ -84,6 +87,7 @@ static struct BitrateBounds bitrate_bounds_intra [] = {
 	{4100, 7400}, {3700, 11150}, {10100,16100}, //vga-intra-frames
 	{16000, 25600}, {27600,35800}, {30100,63100}, //hd-intra-frames
 	{14400,30000}, {60000,75100}, {65400,126600}, //full_hd-intra-frames
+	{65400,126600}, //full_hd-intra-frames
 };
 
 //heuristics to predict a decent inter-frame size
@@ -92,6 +96,7 @@ static struct BitrateBounds bitrate_bounds_inter [] = {
 	{900, 1200}, {1800, 2200}, {3600, 4500}, //vga-inter-frames
 	{3000, 4500}, {7100, 8400}, {14700,17500}, //hd-inter-frames
 	{3100,8500}, {14100,16500}, {30000,35600}, //full_hd-inter-frames
+	{30000,35600}, //full_hd-inter-frames
 };
 
 //heuristics to predict a decent key/intra-frame size for SVC
@@ -133,6 +138,9 @@ int layered_frame_count[MaxSpatialLayers][MaxTemporalLayers];
 
 #define LAYER_IDS_TO_IDX(sl, tl, num_tl) ((sl) * (num_tl) + (tl))
 
+unsigned int dynamic_size[2] = {0, 0};
+unsigned int dynamic_bitrates[2] = {0, 0};
+
 static int verbose = 0;
 
 static char*
@@ -154,7 +162,7 @@ static void show_help()
 {
   printf("Usage: \n"
 		  "  fake-enc [--codec=VP8|VP9|AV1] [--framecount=frame count] "
-		  "[--preset= 0 to 12] \n\n"
+		  "[--preset= 0 to 13] \n\n"
 		  "    Preset0: QVGA_256kbps_30fps \n"
 		  "    Preset1: QVGA_512kbps_30fps \n"
 		  "    Preset2: QVGA_1024kbps_30fps \n"
@@ -167,9 +175,18 @@ static void show_help()
 		  "    Preset9: FULLHD_1024kbps_30fps \n"
 		  "    Preset10: FULLHD_4096kbps_30fps \n"
 		  "    Preset11: FULLHD_8192kbps_30fps \n"
-		  "    Preset12: SVC_HD_4096kbps_30fps_S3T2 \n"
+		  //Please add any non-SVC, non-dynamirc-rate-change
+		  // presets here and increment the SVC_PRESET_START_INDEX
+		  // and DYNAMIC_RATE_CHAGE_PRESET_START_INDEX
+		  "    Preset12: FULLHD_8192kbps_30fps_DynamicRateChange \n"
+		  //Please add any non-SVC presets here and
+		  //increment the SVC_PRESET_START_INDEX
+		  "    Preset13: SVC_HD_4096kbps_30fps_S3T2 \n"
 		 "\n");
 }
+
+#define DYNAMIC_RATE_CHAGE_PRESET_START_INDEX 12
+#define SVC_PRESET_START_INDEX 13
 
 static void
 parse_args(int argc, char **argv)
@@ -183,7 +200,8 @@ parse_args(int argc, char **argv)
         {"framecount", required_argument, 0, 3},
         {"temporal-layers", required_argument, 0, 4},
         {"spatial-layers", required_argument, 0, 5},
-        {"verbose", required_argument, 0, 6},
+        {"dynamic-rate-change", required_argument, 0, 6},
+        {"verbose", required_argument, 0, 7},
         { NULL,  0, NULL, 0 }
   };
 
@@ -207,7 +225,7 @@ parse_args(int argc, char **argv)
       case 2: {
 	  int preset = atoi(optarg);
 	  CodecID id = enc_params.id;
-          if (preset < 0 || preset > 12) {
+          if (preset < 0 || preset > SVC_PRESET_START_INDEX) {
             printf ("Unknown preset, Failed \n");
             exit(0);
 	  }
@@ -225,6 +243,9 @@ parse_args(int argc, char **argv)
         enc_params.num_sl = atoi(optarg);
 	break;
       case 6:
+        enc_params.dynamic_rate_change = atoi(optarg);
+	break;
+      case 7:
         verbose = atoi(optarg);
 	break;
       default:
@@ -395,9 +416,7 @@ static void display_encode_status (unsigned int bitstream_size) {
   }
 
   printf ("\n============ Encode Staus Report ============ \n\n");
-  printf ("Bitrate of the Compressed stream = %d kbps\n\n",
-		   (((bitstream_size / enc_params.framecount) *
-		     enc_params.framerate) * 8 ) / 1000);
+  //SVC
   if (enc_params.num_sl > 1 || enc_params.num_tl > 1) {
     int total_bitrate = 0;
     for (int sl = 0; sl < enc_params.num_sl; sl++) {
@@ -413,6 +432,22 @@ static void display_encode_status (unsigned int bitstream_size) {
       }
     }
   }
+
+  //Dynamic Rate Chaange
+  if (enc_params.dynamic_rate_change) {
+    int frames_count = enc_params.framecount/2;
+    printf ("Bitrate used for the streams with %d target bitrate = %d kbps\n\n",
+            dynamic_bitrates[0],
+            (((dynamic_size[0] / frames_count) *
+		     enc_params.framerate) * 8 ) / 1000);
+    printf ("Bitrate used for the streams with %d target bitrate = %d kbps\n\n",
+            dynamic_bitrates[1],
+            (((dynamic_size[1] / frames_count) *
+		     enc_params.framerate) * 8 ) / 1000);
+  }
+  printf ("Bitrate of the Compressed stream = %d kbps\n\n",
+		   (((bitstream_size / enc_params.framecount) *
+		     enc_params.framerate) * 8 ) / 1000);
   printf ("\n");
 }
 
@@ -468,17 +503,23 @@ start_virtual_encode (LibMeboRateController *rc)
    LibMeboRCFrameParams rc_frame_params;
    unsigned int preset = enc_params.preset;
    unsigned int svc_preset;
+   unsigned int frame_count;
 
    if (verbose)
      printf ("=======Fake Encode starts ==============\n");
 
    if (enc_params.num_sl > 1 || enc_params.num_tl >1)
-     svc_preset = preset - 12;
+     svc_preset = preset - SVC_PRESET_START_INDEX;
+
+   //Account spatial svc in frame_count
+   frame_count = enc_params.framecount * enc_params.num_sl;
 
    srand(time(NULL));
-   for (i = 0; i < (enc_params.framecount * enc_params.num_sl); i++) {
+   for (i = 0; i < frame_count; i++) {
      int spatial_id;
      int temporal_id;
+     int update_rate = 0;
+     unsigned int *dyn_size;
      predicted_size = 0;
      lower =0;
      upper=0;
@@ -487,9 +528,19 @@ start_virtual_encode (LibMeboRateController *rc)
          enc_params.num_sl, enc_params.num_tl,
 	 &spatial_id, &temporal_id);
 
+     //Dynamic rate reset: Reduce the framerate by 1/8 th
+     if (enc_params.dynamic_rate_change &&
+		     i >= frame_count/2){
+       preset  = 9;//bitrate change from 4096 to 1024
+       dyn_size = &dynamic_size[1];
+       update_rate = (i == frame_count/2) ? 1 : 0;
+     } else {
+       dyn_size = &dynamic_size[0];
+     }
+
      if (i % key_frame_period == 0) {
        libmebo_frame_type = LIBMEBO_KEY_FRAME;
-       if (preset < 12) {
+       if (preset < SVC_PRESET_START_INDEX) {
          lower = bitrate_bounds_intra [preset].lower;
          upper = bitrate_bounds_intra [preset].upper;
        } else {
@@ -505,7 +556,7 @@ start_virtual_encode (LibMeboRateController *rc)
      }
      else {
        libmebo_frame_type = LIBMEBO_INTER_FRAME;
-       if (preset < 12) {
+       if (preset < SVC_PRESET_START_INDEX) {
          lower = bitrate_bounds_inter [preset].lower;
          upper = bitrate_bounds_inter [preset].upper;
        } else {
@@ -519,6 +570,14 @@ start_virtual_encode (LibMeboRateController *rc)
        }
      }
      predicted_size = (rand() % (upper - lower)) + lower;
+
+     //Update libmebo rate control config
+     if (update_rate) {
+      dynamic_bitrates[0] = libmebo_rc_config.target_bandwidth; 
+      libmebo_rc_config.target_bandwidth /= 8;
+      dynamic_bitrates[1] = libmebo_rc_config.target_bandwidth;
+      libmebo_rate_controller_update_config (rc, &libmebo_rc_config); 
+     }
 
      rc_frame_params.frame_type = libmebo_frame_type;
 
@@ -559,8 +618,8 @@ start_virtual_encode (LibMeboRateController *rc)
 	     buf_size);
        }
      }
-
      total_size = total_size + buf_size;
+     *dyn_size += buf_size;
    }
 
    if (verbose)
