@@ -504,6 +504,7 @@ start_virtual_encode (LibMeboRateController *rc)
    unsigned int preset = enc_params.preset;
    unsigned int svc_preset;
    unsigned int frame_count;
+   unsigned int prev_is_key;
 
    if (verbose)
      printf ("=======Fake Encode starts ==============\n");
@@ -552,7 +553,6 @@ start_virtual_encode (LibMeboRateController *rc)
              svc_bitrate_bounds_intra[svc_preset].
 	         layer_bitrate_upper[spatial_id][temporal_id];
        }
-
      }
      else {
        libmebo_frame_type = LIBMEBO_INTER_FRAME;
@@ -593,11 +593,22 @@ start_virtual_encode (LibMeboRateController *rc)
 
      buf_size = predicted_size;
 
-     //adjust 5% of the prediction size based on QP
-     if (qp < (prev_qp + 10))
-       buf_size += ((buf_size * 5)/100);
-     else
-       buf_size -= ((buf_size * 5)/100);
+     //Heuristics to calculate a reasonable value of the
+     //compressed frame size
+     if (i != 0 && !prev_is_key) {
+       int qp_val  = (qp == 0) ? 1 : qp;
+       int size_range = upper - lower;
+       int qp_range_length = size_range / 256;
+       int suggested_size = lower + (qp_val * qp_range_length);
+       int new_predicted_size = 0;
+
+       if ((qp) < prev_qp)
+         new_predicted_size = (rand() % (upper - suggested_size)) + suggested_size;
+       else
+	 new_predicted_size = (rand() % (suggested_size - lower)) + lower;
+
+       buf_size = new_predicted_size;
+     }
 
      prev_qp = qp;
 
@@ -620,6 +631,9 @@ start_virtual_encode (LibMeboRateController *rc)
      }
      total_size = total_size + buf_size;
      *dyn_size += buf_size;
+
+     prev_is_key = !(i % key_frame_period);
+
    }
 
    if (verbose)
