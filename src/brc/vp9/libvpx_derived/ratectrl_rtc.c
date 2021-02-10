@@ -106,7 +106,7 @@ void brc_vp9_compute_qp (VP9RateControlRTC *rtc, VP9FrameParamsQpRTC *frame_para
     update_buffer_level_preencode(cpi_);
   } else {
     vp9_update_temporal_layer_framerate(cpi_);
-    //Fixme:Important: this is not in the original source code
+    //Clarify: seems to be a dead code in libvpx
     // vp9_update_spatial_layer_framerate (cpi_, 30);
     vp9_restore_layer_context(cpi_);
     vp9_rc_get_svc_params(cpi_);
@@ -133,7 +133,6 @@ void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig
     oxcf->init_framerate = 30;
   else
     oxcf->init_framerate = rc_cfg->framerate;
-  oxcf->mode = GOOD;
   oxcf->worst_allowed_q = vp9_quantizer_to_qindex(rc_cfg->max_quantizer);
   oxcf->best_allowed_q = vp9_quantizer_to_qindex(rc_cfg->min_quantizer);
   rc->worst_quality = oxcf->worst_allowed_q;
@@ -142,16 +141,8 @@ void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig
   oxcf->starting_buffer_level_ms = rc_cfg->buf_initial_sz;
   oxcf->optimal_buffer_level_ms = rc_cfg->buf_optimal_sz;
   oxcf->maximum_buffer_size_ms = rc_cfg->buf_sz;
-  oxcf->lag_in_frames = 25;
   oxcf->under_shoot_pct = rc_cfg->undershoot_pct;
   oxcf->over_shoot_pct = rc_cfg->overshoot_pct;
-
-  oxcf->two_pass_vbrmin_section = 0;
-  oxcf->two_pass_vbrmax_section = 2000;
-  oxcf->enable_auto_arf = 0;//Note, double check???
-  oxcf->target_level = 255;
-  if (vp9_get_level_index(oxcf->target_level) >= 0)
-    vp9_config_target_level(oxcf);
 
   oxcf->ss_number_layers = rc_cfg->ss_number_layers;
   oxcf->ts_number_layers = rc_cfg->ts_number_layers;
@@ -162,20 +153,12 @@ void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig
   cpi_->oxcf.rc_max_intra_bitrate_pct = rc_cfg->max_intra_bitrate_pct;
   cpi_->framerate = rc_cfg->framerate;
 
-  cpi_->target_level = oxcf->target_level;
   cpi_->svc.number_spatial_layers = rc_cfg->ss_number_layers;
   cpi_->svc.number_temporal_layers = rc_cfg->ts_number_layers;
-
-  vp9_set_level_constraint(&cpi_->level_constraint,
-                       vp9_get_level_index(cpi_->target_level));
 
   cpi_->refresh_golden_frame = 0;
   cpi_->refresh_last_frame = 1;
 
-  //Fixme: Single layer brc need fix
-
-  cpi_->svc.number_spatial_layers = rc_cfg->ss_number_layers;
-  cpi_->svc.number_temporal_layers = rc_cfg->ts_number_layers;
   for (int sl = 0; sl < (cpi_->svc.number_spatial_layers % VPX_SS_MAX_LAYERS); ++sl) {
     for (int tl = 0; tl < (cpi_->svc.number_temporal_layers % VPX_TS_MAX_LAYERS); ++tl) {
       const int layer =
@@ -215,13 +198,24 @@ void brc_init_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig *rc_c
   cm->profile = PROFILE_0;
   cm->bit_depth = VPX_BITS_8;
   cm->show_frame = 1;
+  oxcf->mode = GOOD;
   oxcf->rc_mode = VPX_CBR;
   oxcf->pass = 0;
+
+  /*Defaults derived from vp9_spatial_svc_encoder*/
   oxcf->aq_mode = NO_AQ;
   oxcf->content = VP9E_CONTENT_DEFAULT;
   oxcf->drop_frames_water_mark = 0;
+  oxcf->lag_in_frames = 25;
+  oxcf->two_pass_vbrmin_section = 0;
+  oxcf->two_pass_vbrmax_section = 2000; //It should be okay to reset to zero
+  oxcf->enable_auto_arf = 0;//Note, double check???
+  oxcf->target_level = 0;
+
+  cpi_->target_level = oxcf->target_level;
 
   brc_vp9_update_rate_control(rtc, rc_cfg);
+
   cpi_->use_svc = (cpi_->svc.number_spatial_layers > 1 ||
                    cpi_->svc.number_temporal_layers > 1)
                       ? 1

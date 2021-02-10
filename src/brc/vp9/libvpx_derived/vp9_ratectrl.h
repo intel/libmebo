@@ -441,11 +441,6 @@ typedef struct {
   int force_max_q;
   // Last frame was dropped post encode on scene change.
   int last_post_encode_dropped_scene_change;
-  // Enable post encode frame dropping for screen content. Only enabled when
-  // ext_use_post_encode_drop is enabled by user.
-  int use_post_encode_drop;
-  // External flag to enable post encode frame dropping, controlled by user.
-  int ext_use_post_encode_drop;
 
   int damped_adjustment[RATE_FACTOR_LEVELS];
   double arf_active_best_quality_adjustment_factor;
@@ -480,8 +475,6 @@ void vp9_set_quantizer(VP9_COMP *cpi, int q);
 int vp9_quantizer_to_qindex(int quantizer);
 
 int vp9_get_level_index(VP9_LEVEL level);
-
-void vp9_config_target_level(VP9EncoderConfig *oxcf);
 
 void vp9_set_level_constraint(LevelConstraint *ls, int8_t level_index);
 

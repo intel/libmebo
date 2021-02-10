@@ -20,55 +20,28 @@
 void vp9_init_layer_context(VP9_COMP *const cpi) {
   SVC *const svc = &cpi->svc;
   const VP9EncoderConfig *const oxcf = &cpi->oxcf;
-  int sl, tl, i;
+  int sl, tl;
   int alt_ref_idx = svc->number_spatial_layers;
 
   svc->spatial_layer_id = 0;
   svc->temporal_layer_id = 0;
-  svc->force_zero_mode_spatial_ref = 0;
-  svc->use_base_mv = 0;
-  svc->use_partition_reuse = 0;
   svc->use_gf_temporal_ref = 1;
   svc->use_gf_temporal_ref_current_layer = 0;
-  svc->scaled_temp_is_alloc = 0;
-  svc->scaled_one_half = 0;
   svc->current_superframe = 0;
-  svc->non_reference_frame = 0;
   svc->skip_enhancement_layer = 0;
   svc->disable_inter_layer_pred = INTER_LAYER_PRED_ON;
   svc->framedrop_mode = CONSTRAINED_LAYER_DROP;
   svc->set_intra_only_frame = 0;
   svc->previous_frame_is_intra_only = 0;
   svc->superframe_has_layer_sync = 0;
-  svc->use_set_ref_frame_config = 0;
   svc->num_encoded_top_layer = 0;
-  svc->simulcast_mode = 0;
   svc->single_layer_svc = 0;
 
-  for (i = 0; i < REF_FRAMES; ++i) {
-    svc->fb_idx_spatial_layer_id[i] = 0xff;
-    svc->fb_idx_temporal_layer_id[i] = 0xff;
-    svc->fb_idx_base[i] = 0;
-  }
   for (sl = 0; sl < oxcf->ss_number_layers; ++sl) {
-    svc->last_layer_dropped[sl] = 0;
-    svc->drop_spatial_layer[sl] = 0;
-    svc->ext_frame_flags[sl] = 0;
-    svc->lst_fb_idx[sl] = 0;
-    svc->gld_fb_idx[sl] = 1;
-    svc->alt_fb_idx[sl] = 2;
     svc->framedrop_thresh[sl] = oxcf->drop_frames_water_mark;
-    svc->fb_idx_upd_tl0[sl] = -1;
     svc->drop_count[sl] = 0;
     svc->spatial_layer_sync[sl] = 0;
-    svc->force_drop_constrained_from_above[sl] = 0;
   }
-  svc->max_consec_drop = INT_MAX;
-
-  svc->buffer_gf_temporal_ref[1].idx = 7;
-  svc->buffer_gf_temporal_ref[0].idx = 6;
-  svc->buffer_gf_temporal_ref[1].is_used = 0;
-  svc->buffer_gf_temporal_ref[0].is_used = 0;
 
   for (sl = 0; sl < oxcf->ss_number_layers; ++sl) {
     for (tl = 0; tl < oxcf->ts_number_layers; ++tl) {
@@ -101,35 +74,11 @@ void vp9_init_layer_context(VP9_COMP *const cpi) {
         lrc->last_q[INTER_FRAME] = oxcf->worst_allowed_q;
         lrc->avg_frame_qindex[INTER_FRAME] = oxcf->worst_allowed_q;
         lrc->avg_frame_qindex[KEY_FRAME] = oxcf->worst_allowed_q;
-      } else {
-        lc->target_bandwidth = oxcf->layer_target_bitrate[layer];
-        lrc->last_q[KEY_FRAME] = oxcf->best_allowed_q;
-        lrc->last_q[INTER_FRAME] = oxcf->best_allowed_q;
-        lrc->avg_frame_qindex[KEY_FRAME] =
-            (oxcf->worst_allowed_q + oxcf->best_allowed_q) / 2;
-        lrc->avg_frame_qindex[INTER_FRAME] =
-            (oxcf->worst_allowed_q + oxcf->best_allowed_q) / 2;
-        if (oxcf->ss_enable_auto_arf[sl])
-          lc->alt_ref_idx = alt_ref_idx++;
-        else
-          lc->alt_ref_idx = INVALID_IDX;
-        lc->gold_ref_idx = INVALID_IDX;
       }
 
       lrc->buffer_level =
           oxcf->starting_buffer_level_ms * lc->target_bandwidth / 1000;
       lrc->bits_off_target = lrc->buffer_level;
-
-      // Initialize the cyclic refresh parameters. If spatial layers are used
-      // (i.e., ss_number_layers > 1), these need to be updated per spatial
-      // layer.
-      // Cyclic refresh is only applied on base temporal layer.
-      if (oxcf->ss_number_layers > 1 && tl == 0) {
-        lc->sb_index = 0;
-        lc->actual_num_seg1_blocks = 0;
-        lc->actual_num_seg2_blocks = 0;
-        lc->counter_encode_maxq_scene_change = 0;
-      }
     }
   }
 
@@ -298,7 +247,6 @@ void vp9_restore_layer_context(VP9_COMP *const cpi) {
   LAYER_CONTEXT *const lc = get_layer_context(cpi);
   const int old_frame_since_key = cpi->rc.frames_since_key;
   const int old_frame_to_key = cpi->rc.frames_to_key;
-  const int old_ext_use_post_encode_drop = cpi->rc.ext_use_post_encode_drop;
 
   cpi->rc = lc->rc;
   //cpi->twopass = lc->twopass;
@@ -315,7 +263,6 @@ void vp9_restore_layer_context(VP9_COMP *const cpi) {
     cpi->rc.frames_since_key = old_frame_since_key;
     cpi->rc.frames_to_key = old_frame_to_key;
   }
-  cpi->rc.ext_use_post_encode_drop = old_ext_use_post_encode_drop;
 }
 
 void vp9_save_layer_context(VP9_COMP *const cpi) {
@@ -326,16 +273,6 @@ void vp9_save_layer_context(VP9_COMP *const cpi) {
   //Fixme: one one pass supported
   //lc->twopass = cpi->twopass;
   lc->target_bandwidth = (int)oxcf->target_bandwidth;
-}
-
-void vp9_inc_frame_in_layer(VP9_COMP *const cpi) {
-  LAYER_CONTEXT *const lc =
-      &cpi->svc.layer_context[cpi->svc.spatial_layer_id *
-                              cpi->svc.number_temporal_layers];
-  ++lc->current_video_frame_in_layer;
-  ++lc->frames_from_key_frame;
-  if (cpi->svc.spatial_layer_id == cpi->svc.number_spatial_layers - 1)
-    ++cpi->svc.current_superframe;
 }
 
 void get_layer_resolution(const int width_org, const int height_org,
@@ -354,139 +291,6 @@ void get_layer_resolution(const int width_org, const int height_org,
 
   *width_out = w;
   *height_out = h;
-}
-
-int vp9_one_pass_cbr_svc_start_layer(VP9_COMP *const cpi) {
-  int width = 0, height = 0;
-  SVC *const svc = &cpi->svc;
-  LAYER_CONTEXT *lc = NULL;
-  int scaling_factor_num = 1;
-  int scaling_factor_den = 1;
-  svc->skip_enhancement_layer = 0;
-
-  if (svc->disable_inter_layer_pred == INTER_LAYER_PRED_OFF &&
-      svc->number_spatial_layers > 1 && svc->number_spatial_layers <= 3 &&
-      svc->number_temporal_layers <= 3)
-    svc->simulcast_mode = 1;
-  else
-    svc->simulcast_mode = 0;
-
-  if (svc->number_spatial_layers > 1) {
-    svc->use_base_mv = 1;
-    svc->use_partition_reuse = 1;
-  }
-  svc->force_zero_mode_spatial_ref = 1;
-
-  // For constrained_from_above drop mode: before encoding superframe (i.e.,
-  // at SL0 frame) check all spatial layers (starting from top) for possible
-  // drop, and if so, set a flag to force drop of that layer and all its lower
-  // layers.
-  if (svc->spatial_layer_to_encode == svc->first_spatial_layer_to_encode) {
-    int sl;
-    for (sl = 0; sl < svc->number_spatial_layers; sl++)
-      svc->force_drop_constrained_from_above[sl] = 0;
-    if (svc->framedrop_mode == CONSTRAINED_FROM_ABOVE_DROP) {
-      for (sl = svc->number_spatial_layers - 1;
-           sl >= svc->first_spatial_layer_to_encode; sl--) {
-        int layer = sl * svc->number_temporal_layers + svc->temporal_layer_id;
-        LAYER_CONTEXT *const lc = &svc->layer_context[layer];
-        cpi->rc = lc->rc;
-        cpi->oxcf.target_bandwidth = lc->target_bandwidth;
-        if (vp9_test_drop(cpi)) {
-          int sl2;
-          // Set flag to force drop in encoding for this mode.
-          for (sl2 = sl; sl2 >= svc->first_spatial_layer_to_encode; sl2--)
-            svc->force_drop_constrained_from_above[sl2] = 1;
-          break;
-        }
-      }
-    }
-  }
-
-  lc = &svc->layer_context[svc->spatial_layer_id * svc->number_temporal_layers +
-                           svc->temporal_layer_id];
-
-  // Setting the worst/best_quality via the encoder control: SET_SVC_PARAMETERS,
-  // only for non-BYPASS mode for now.
-  if (svc->temporal_layering_mode != VP9E_TEMPORAL_LAYERING_MODE_BYPASS ||
-      svc->use_set_ref_frame_config) {
-    RATE_CONTROL *const lrc = &lc->rc;
-    lrc->worst_quality = vp9_quantizer_to_qindex(lc->max_q);
-    lrc->best_quality = vp9_quantizer_to_qindex(lc->min_q);
-  }
-
-  if (cpi->oxcf.resize_mode == RESIZE_DYNAMIC && svc->single_layer_svc == 1 &&
-      svc->spatial_layer_id == svc->first_spatial_layer_to_encode /* &&
-      cpi->resize_state != ORIG */) {
-    scaling_factor_num = lc->scaling_factor_num_resize;
-    scaling_factor_den = lc->scaling_factor_den_resize;
-  } else {
-    scaling_factor_num = lc->scaling_factor_num;
-    scaling_factor_den = lc->scaling_factor_den;
-  }
-
-  get_layer_resolution(cpi->oxcf.width, cpi->oxcf.height, scaling_factor_num,
-                       scaling_factor_den, &width, &height);
-
-  // The usage of use_base_mv or partition_reuse assumes down-scale of 2x2.
-  // For now, turn off use of base motion vectors and partition reuse if the
-  // spatial scale factors for any layers are not 2,
-  // keep the case of 3 spatial layers with scale factor of 4x4 for base layer.
-  // TODO(marpan): Fix this to allow for use_base_mv for scale factors != 2.
-  if (svc->number_spatial_layers > 1) {
-    int sl;
-    for (sl = 0; sl < svc->number_spatial_layers - 1; ++sl) {
-      lc = &svc->layer_context[sl * svc->number_temporal_layers +
-                               svc->temporal_layer_id];
-      if ((lc->scaling_factor_num != lc->scaling_factor_den >> 1) &&
-          !(lc->scaling_factor_num == lc->scaling_factor_den >> 2 && sl == 0 &&
-            svc->number_spatial_layers == 3)) {
-        svc->use_base_mv = 0;
-        svc->use_partition_reuse = 0;
-        break;
-      }
-    }
-    // For non-zero spatial layers: if the previous spatial layer was dropped
-    // disable the base_mv and partition_reuse features.
-    if (svc->spatial_layer_id > 0 &&
-        svc->drop_spatial_layer[svc->spatial_layer_id - 1]) {
-      svc->use_base_mv = 0;
-      svc->use_partition_reuse = 0;
-    }
-  }
-
-  svc->non_reference_frame = 0;
-  if (cpi->common.frame_type != KEY_FRAME && !cpi->ext_refresh_last_frame &&
-      !cpi->ext_refresh_golden_frame && !cpi->ext_refresh_alt_ref_frame)
-    svc->non_reference_frame = 1;
-  // For non-flexible mode, where update_buffer_slot is used, need to check if
-  // all buffer slots are not refreshed.
-  if (svc->temporal_layering_mode == VP9E_TEMPORAL_LAYERING_MODE_BYPASS) {
-    if (svc->update_buffer_slot[svc->spatial_layer_id] != 0)
-      svc->non_reference_frame = 0;
-  }
-
-  if (svc->spatial_layer_id == 0) {
-    svc->high_source_sad_superframe = 0;
-    svc->high_num_blocks_with_motion = 0;
-  }
-
-  if (svc->temporal_layering_mode != VP9E_TEMPORAL_LAYERING_MODE_BYPASS &&
-      svc->last_layer_dropped[svc->spatial_layer_id] &&
-      svc->fb_idx_upd_tl0[svc->spatial_layer_id] != -1 &&
-      !svc->layer_context[svc->temporal_layer_id].is_key_frame) {
-    // For fixed/non-flexible mode, if the previous frame (same spatial layer
-    // from previous superframe) was dropped, make sure the lst_fb_idx
-    // for this frame corresponds to the buffer index updated on (last) encoded
-    // TL0 frame (with same spatial layer).
-    cpi->lst_fb_idx = svc->fb_idx_upd_tl0[svc->spatial_layer_id];
-  }
-  //Fixme: Important: check size
-#if 0
-  if (vp9_set_size_literal(cpi, width, height) != 0)
-    return VPX_CODEC_INVALID_PARAM;
-#endif
-  return 0;
 }
 
 // Reset on key frame: reset counters, references and buffer updates.
@@ -557,12 +361,11 @@ void vp9_svc_check_spatial_layer_sync(VP9_COMP *const cpi) {
         // sync frames.
         if (svc->number_spatial_layers == 3) index = svc->spatial_layer_id - 1;
         assert(index >= 0);
-        cpi->alt_fb_idx = svc->buffer_gf_temporal_ref[index].idx;
-        cpi->ext_refresh_alt_ref_frame = 1;
       }
     }
   }
 }
+
 void vp9_svc_adjust_avg_frame_qindex(VP9_COMP *const cpi) {
   VP9_COMMON *const cm = &cpi->common;
   SVC *const svc = &cpi->svc;
@@ -571,7 +374,6 @@ void vp9_svc_adjust_avg_frame_qindex(VP9_COMP *const cpi) {
   // (to level closer to worst_quality) if the overshoot is significant.
   // Reset it for all temporal layers on base spatial layer.
   if (cm->frame_type == KEY_FRAME && cpi->oxcf.rc_mode == VPX_CBR &&
-      !svc->simulcast_mode &&
       rc->projected_frame_size > 3 * rc->avg_frame_bandwidth) {
     int tl;
     rc->avg_frame_qindex[INTER_FRAME] =

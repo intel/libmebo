@@ -146,9 +146,6 @@ typedef struct VP9_COMP {
   uint8_t last_frame_dropped;
 
   int ext_refresh_frame_flags_pending;
-  int ext_refresh_last_frame;
-  int ext_refresh_golden_frame;
-  int ext_refresh_alt_ref_frame;
 
   uint8_t *count_arf_frame_usage;
   uint8_t *count_lastgolden_frame_usage;

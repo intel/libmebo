@@ -330,12 +330,6 @@ int vp9_get_level_index(VP9_LEVEL level) {
   return -1;
 }
 
-void vp9_set_level_constraint(LevelConstraint *ls, int8_t level_index) {
-  ls->level_index = level_index;
-  if (level_index >= 0) {
-    ls->max_cpb_size = vp9_level_defs[level_index].max_cpb_size * (double)1000;
-  }
-}
 #define MI_SIZE_LOG2 3
 #define MI_BLOCK_SIZE_LOG2 (6 - MI_SIZE_LOG2)  // 64 = 2^6
 
@@ -434,7 +428,6 @@ void vp9_set_rc_buffer_sizes(RATE_CONTROL *rc,
   // keep buffer level clipped to the maximum allowed buffer size.
   rc->bits_off_target = VPXMIN(rc->bits_off_target, rc->maximum_buffer_size);
   rc->buffer_level = VPXMIN(rc->buffer_level, rc->maximum_buffer_size);
-
 }
 
 void vp9_check_reset_rc_flag(VP9_COMP *cpi) {
@@ -468,8 +461,8 @@ void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
   cpi->refresh_last_frame = 1;
 
   cpi->target_level = oxcf->target_level;
-  vp9_set_level_constraint(&cpi->level_constraint,
-                       vp9_get_level_index(cpi->target_level));
+  //vp9_set_level_constraint(&cpi->level_constraint,
+  //                     vp9_get_level_index(cpi->target_level));
 
   rc->baseline_gf_interval = (MIN_GF_INTERVAL + MAX_GF_INTERVAL) / 2;
 
@@ -507,46 +500,6 @@ void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
   }
 
   vp9_check_reset_rc_flag(cpi);
-}
-
-// Modify the encoder config for the target level.
-void vp9_config_target_level(VP9EncoderConfig *oxcf) {
-  double max_average_bitrate;  // in bits per second
-  int max_over_shoot_pct;
-  const int target_level_index = vp9_get_level_index(oxcf->target_level);
-
-  assert(target_level_index >= 0);
-  assert(target_level_index < VP9_LEVELS);
- 
-  // Maximum target bit-rate is level_limit * 80%.
-  max_average_bitrate =
-      vp9_level_defs[target_level_index].average_bitrate * 800.0;
-  if ((double)oxcf->target_bandwidth > max_average_bitrate)
-    oxcf->target_bandwidth = (int64_t)(max_average_bitrate);
-
-  // Adjust max over-shoot percentage.
-  max_over_shoot_pct =
-      (int)((max_average_bitrate * 1.10 - (double)oxcf->target_bandwidth) *
-            100 / (double)(oxcf->target_bandwidth));
-  if (oxcf->over_shoot_pct > max_over_shoot_pct)
-    oxcf->over_shoot_pct = max_over_shoot_pct;
-  // Adjust worst allowed quantizer.
-  oxcf->worst_allowed_q = vp9_quantizer_to_qindex(63);
- // Adjust minimum art-ref distance.
-  // min_gf_interval should be no less than min_altref_distance + 1,
-  // as the encoder may produce bitstream with alt-ref distance being
-  // min_gf_interval - 1.
-  if (oxcf->min_gf_interval <=
-      (int)vp9_level_defs[target_level_index].min_altref_distance) {
-    oxcf->min_gf_interval =
-        (int)vp9_level_defs[target_level_index].min_altref_distance + 1;
-    // If oxcf->max_gf_interval == 0, it will be assigned with a default value
-    // in vp9_rc_set_gf_interval_range().
-    if (oxcf->max_gf_interval != 0) {
-      oxcf->max_gf_interval =
-          VPXMAX(oxcf->max_gf_interval, oxcf->min_gf_interval);
-    }
-  }
 }
 
 // These functions use formulaic calculations to make playing with the
@@ -675,25 +628,12 @@ void update_buffer_level_preencode(VP9_COMP *cpi) {
 static void update_buffer_level_svc_preencode(VP9_COMP *cpi) {
   SVC *const svc = &cpi->svc;
   int i;
-  // Set this to 1 to use timestamp delta for "framerate" under
-  // ref_frame_config usage.
-  int use_timestamp = 1;
-  const int64_t ts_delta =
-      svc->time_stamp_superframe - svc->time_stamp_prev[svc->spatial_layer_id];
   for (i = svc->temporal_layer_id; i < svc->number_temporal_layers; ++i) {
     const int layer =
         LAYER_IDS_TO_IDX(svc->spatial_layer_id, i, svc->number_temporal_layers);
     LAYER_CONTEXT *const lc = &svc->layer_context[layer];
     RATE_CONTROL *const lrc = &lc->rc;
-    if (use_timestamp && cpi->svc.use_set_ref_frame_config &&
-        svc->number_temporal_layers == 1 && ts_delta > 0 &&
-        svc->current_superframe > 0) {
-      // TODO(marpan): This may need to be modified for temporal layers.
-      const double framerate_pts = 10000000.0 / ts_delta;
-      lrc->bits_off_target += (int)(lc->target_bandwidth / framerate_pts);
-    } else {
-      lrc->bits_off_target += (int)(lc->target_bandwidth / lc->framerate);
-    }
+    lrc->bits_off_target += (int)(lc->target_bandwidth / lc->framerate);
     // Clip buffer level to maximum buffer size for the layer.
     lrc->bits_off_target =
         VPXMIN(lrc->bits_off_target, lrc->maximum_buffer_size);
@@ -844,8 +784,6 @@ void vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL *rc) {
 
   rc->force_max_q = 0;
   rc->last_post_encode_dropped_scene_change = 0;
-  rc->use_post_encode_drop = 0;
-  rc->ext_use_post_encode_drop = 0;
   rc->arf_active_best_quality_adjustment_factor = 1.0;
   rc->arf_increase_active_best_quality = 0;
   rc->preserve_arf_as_gld = 0;
@@ -995,14 +933,7 @@ static double get_rate_correction_factor(const VP9_COMP *cpi) {
 
   if (frame_is_intra_only(cm)) {
     rcf = rc->rate_correction_factors[KF_STD];
-  }
-
-  else {
-    if ((cpi->refresh_alt_ref_frame || cpi->refresh_golden_frame) &&
-        !rc->is_src_frame_alt_ref && !cpi->use_svc &&
-        (cpi->oxcf.rc_mode != VPX_CBR || cpi->oxcf.gf_cbr_boost_pct > 100))
-      rcf = rc->rate_correction_factors[GF_ARF_STD];
-    else
+  } else {
       rcf = rc->rate_correction_factors[INTER_NORMAL];
   }
   rcf *= rcf_mult[rc->frame_size_selector % FRAME_SCALE_STEPS];
@@ -1022,11 +953,6 @@ static void set_rate_correction_factor(VP9_COMP *cpi, double factor) {
     rc->rate_correction_factors[KF_STD] = factor;
   } 
   else {
-    if ((cpi->refresh_alt_ref_frame || cpi->refresh_golden_frame) &&
-        !rc->is_src_frame_alt_ref && !cpi->use_svc &&
-        (cpi->oxcf.rc_mode != VPX_CBR || cpi->oxcf.gf_cbr_boost_pct > 100))
-      rc->rate_correction_factors[GF_ARF_STD] = factor;
-    else
       rc->rate_correction_factors[INTER_NORMAL] = factor;
   }
 }
@@ -1036,24 +962,14 @@ static void vp9_rc_update_rate_correction_factors(VP9_COMP *cpi) {
   int correction_factor = 100;
   double rate_correction_factor = get_rate_correction_factor(cpi);
   double adjustment_limit;
-  //Fixme
-#if 0
-  RATE_FACTOR_LEVEL rf_lvl =
-      cpi->twopass.gf_group.rf_level[cpi->twopass.gf_group.index];
-#endif
   int rf_lvl = 0;
   int projected_size_based_on_q = 0;
 
-  // Do not update the rate factors for arf overlay frames.
-  if (cpi->rc.is_src_frame_alt_ref) return;
-
-  //Fixme: Add cyclic refresh
-  {
-    FRAME_TYPE frame_type = cm->intra_only ? KEY_FRAME : cm->frame_type;
-    projected_size_based_on_q =
-        vp9_estimate_bits_at_q(frame_type, cm->base_qindex, cm->MBs,
+  FRAME_TYPE frame_type = cm->intra_only ? KEY_FRAME : cm->frame_type;
+  projected_size_based_on_q =
+      vp9_estimate_bits_at_q(frame_type, cm->base_qindex, cm->MBs,
                                rate_correction_factor, cm->bit_depth);
-  }
+
   // Work out a size correction factor.
   if (projected_size_based_on_q > FRAME_OVERHEAD_BITS)
     correction_factor = (int)((100 * (int64_t)cpi->rc.projected_frame_size) /
@@ -1387,12 +1303,6 @@ void vp9_rc_set_frame_target(VP9_COMP *cpi, int target) {
 
   rc->this_frame_target = target;
 
-  // Modify frame size target when down-scaling.
-  if (cpi->oxcf.resize_mode == RESIZE_DYNAMIC &&
-      rc->frame_size_selector != UNSCALED)
-    rc->this_frame_target = (int)(rc->this_frame_target *
-                                  rate_thresh_mult[rc->frame_size_selector % FRAME_SCALE_STEPS]);
-
   // Target rate per SB64 (including partial SB64s.
   rc->sb64_target_rate = (int)(((int64_t)rc->this_frame_target * 64 * 64) /
                                (cm->width * cm->height));
@@ -1491,34 +1401,26 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
     }
 
   } else {
-      if ((cpi->use_svc && oxcf->rc_mode == VPX_CBR) ||
-        (!rc->is_src_frame_alt_ref &&
-         !(cpi->refresh_golden_frame || cpi->refresh_alt_ref_frame))) {
-      rc->last_q[INTER_FRAME] = qindex;
-      rc->avg_frame_qindex[INTER_FRAME] =
-          ROUND_POWER_OF_TWO(3 * rc->avg_frame_qindex[INTER_FRAME] + qindex, 2);
-      rc->ni_frames++;
-      rc->tot_q += vp9_convert_qindex_to_q(qindex, cm->bit_depth);
-      rc->avg_q = rc->tot_q / rc->ni_frames;
-      // Calculate the average Q for normal inter frames (not key or GFU
-      // frames).
-      rc->ni_tot_qi += qindex;
-      rc->ni_av_qi = rc->ni_tot_qi / rc->ni_frames;
-    }
+    rc->last_q[INTER_FRAME] = qindex;
+    rc->avg_frame_qindex[INTER_FRAME] =
+       ROUND_POWER_OF_TWO(3 * rc->avg_frame_qindex[INTER_FRAME] + qindex, 2);
+    rc->ni_frames++;
+    rc->tot_q += vp9_convert_qindex_to_q(qindex, cm->bit_depth);
+    rc->avg_q = rc->tot_q / rc->ni_frames;
+    // Calculate the average Q for normal inter frames (not key or GFU
+    // frames).
+    rc->ni_tot_qi += qindex;
+    rc->ni_av_qi = rc->ni_tot_qi / rc->ni_frames;
   }
 
   if (cpi->use_svc) vp9_svc_adjust_avg_frame_qindex(cpi);
-
 
   // Keep record of last boosted (KF/KF/ARF) Q value.
   // If the current frame is coded at a lower Q then we also update it.
   // If all mbs in this group are skipped only update if the Q value is
   // better than that already stored.
   // This is used to help set quality in forced key frames to reduce popping
-  if ((qindex < rc->last_boosted_qindex) || (cm->frame_type == KEY_FRAME) ||
-      (!rc->constrained_gf_group &&
-       (cpi->refresh_alt_ref_frame ||
-        (cpi->refresh_golden_frame && !rc->is_src_frame_alt_ref)))) {
+  if ((qindex < rc->last_boosted_qindex) || (cm->frame_type == KEY_FRAME)) {
     rc->last_boosted_qindex = qindex;
   }
 
@@ -1768,99 +1670,16 @@ void vp9_rc_get_svc_params(VP9_COMP *cpi) {
     }
   }
 
-  if (svc->simulcast_mode) {
-    if (svc->spatial_layer_id > 0 &&
-        svc->layer_context[layer].is_key_frame == 1) {
-      cm->frame_type = KEY_FRAME;
-      //cpi->ref_frame_flags &= (~VP9_LAST_FLAG & ~VP9_GOLD_FLAG & ~VP9_ALT_FLAG);
-      target = vp9_calc_iframe_target_size_one_pass_cbr(cpi);
-    }
-    // Set the buffer idx and refresh flags for key frames in simulcast mode.
-    // Note the buffer slot for long-term reference is set below (line 2255),
-    // and alt_ref is used for that on key frame. So use last and golden for
-    // the other two normal slots.
-    if (cm->frame_type == KEY_FRAME) {
-      if (svc->number_spatial_layers == 2) {
-        if (svc->spatial_layer_id == 0) {
-          cpi->lst_fb_idx = 0;
-          cpi->gld_fb_idx = 2;
-          cpi->alt_fb_idx = 6;
-        } else if (svc->spatial_layer_id == 1) {
-          cpi->lst_fb_idx = 1;
-          cpi->gld_fb_idx = 3;
-          cpi->alt_fb_idx = 6;
-        }
-      } else if (svc->number_spatial_layers == 3) {
-        if (svc->spatial_layer_id == 0) {
-          cpi->lst_fb_idx = 0;
-          cpi->gld_fb_idx = 3;
-          cpi->alt_fb_idx = 6;
-        } else if (svc->spatial_layer_id == 1) {
-          cpi->lst_fb_idx = 1;
-          cpi->gld_fb_idx = 4;
-          cpi->alt_fb_idx = 6;
-        } else if (svc->spatial_layer_id == 2) {
-          cpi->lst_fb_idx = 2;
-          cpi->gld_fb_idx = 5;
-          cpi->alt_fb_idx = 7;
-        }
-      }
-      cpi->ext_refresh_last_frame = 1;
-      cpi->ext_refresh_golden_frame = 1;
-      cpi->ext_refresh_alt_ref_frame = 1;
-    }
-  }
-
   // Check if superframe contains a sync layer request.
   vp9_svc_check_spatial_layer_sync(cpi);
 
-  // If long term termporal feature is enabled, set the period of the update.
-  // The update/refresh of this reference frame is always on base temporal
-  // layer frame.
-  if (svc->use_gf_temporal_ref_current_layer) {
-    // Only use gf long-term prediction on non-key superframes.
-    if (!svc->layer_context[svc->temporal_layer_id].is_key_frame) {
-      // Use golden for this reference, which will be used for prediction.
-      int index = svc->spatial_layer_id;
-      if (svc->number_spatial_layers == 3) index = svc->spatial_layer_id - 1;
-      assert(index >= 0);
-      cpi->gld_fb_idx = svc->buffer_gf_temporal_ref[index].idx;
-      // Enable prediction off LAST (last reference) and golden (which will
-      // generally be further behind/long-term reference).
-    }
-    // Check for update/refresh of reference: only refresh on base temporal
-    // layer.
-    if (svc->temporal_layer_id == 0) {
-      if (svc->layer_context[svc->temporal_layer_id].is_key_frame) {
-        // On key frame we update the buffer index used for long term reference.
-        // Use the alt_ref since it is not used or updated on key frames.
-        int index = svc->spatial_layer_id;
-        if (svc->number_spatial_layers == 3) index = svc->spatial_layer_id - 1;
-        assert(index >= 0);
-        cpi->alt_fb_idx = svc->buffer_gf_temporal_ref[index].idx;
-        cpi->ext_refresh_alt_ref_frame = 1;
-      } else if (rc->frames_till_gf_update_due == 0) {
-        // Set perdiod of next update. Make it a multiple of 10, as the cyclic
-        // refresh is typically ~10%, and we'd like the update to happen after
-        // a few cylces of the refresh (so it better quality frame). Note the
-        // cyclic refresh for SVC only operates on base temporal layer frames.
-        // Choose 20 as perdiod for now (2 cycles).
-        rc->baseline_gf_interval = 20;
-        rc->frames_till_gf_update_due = rc->baseline_gf_interval;
-        cpi->ext_refresh_golden_frame = 1;
-        rc->gfu_boost = DEFAULT_GF_BOOST;
-      }
-    }
-  } else if (!svc->use_gf_temporal_ref) {
-    rc->frames_till_gf_update_due = INT_MAX;
-    rc->baseline_gf_interval = INT_MAX;
-  }
+  rc->frames_till_gf_update_due = INT_MAX;
+  rc->baseline_gf_interval = INT_MAX;
 
-  //Fixme No cyclic refresh aq
+  //ToDo: Add support for intra-only
 
   vp9_rc_set_frame_target(cpi, target);
   if (cm->show_frame) update_buffer_level_svc_preencode(cpi);
-
 }
 
 void vp9_rc_get_one_pass_cbr_params(VP9_COMP *cpi) {
@@ -1885,7 +1704,6 @@ void vp9_rc_get_one_pass_cbr_params(VP9_COMP *cpi) {
     // NOTE: frames_till_gf_update_due must be <= frames_to_key.
     if (rc->frames_till_gf_update_due > rc->frames_to_key)
       rc->frames_till_gf_update_due = rc->frames_to_key;
-    cpi->refresh_golden_frame = 1;
     rc->gfu_boost = DEFAULT_GF_BOOST;
   }
 
@@ -1925,62 +1743,24 @@ void vp9_rc_set_gf_interval_range(const VP9_COMP *const cpi,
                                   RATE_CONTROL *const rc) {
   const VP9EncoderConfig *const oxcf = &cpi->oxcf;
 
-  // Special case code for 1 pass fixed Q mode tests
-  if ((oxcf->pass == 0) && (oxcf->rc_mode == VPX_Q)) {
-    rc->max_gf_interval = FIXED_GF_INTERVAL;
-    rc->min_gf_interval = FIXED_GF_INTERVAL;
-    rc->static_scene_max_gf_interval = FIXED_GF_INTERVAL;
-  } else {
-    // Set Maximum gf/arf interval
-    rc->max_gf_interval = oxcf->max_gf_interval;
-    rc->min_gf_interval = oxcf->min_gf_interval;
-#if CONFIG_RATE_CTRL
-    if (rc->min_gf_interval == 0) {
-      rc->min_gf_interval = vp9_rc_get_default_min_gf_interval(
-          oxcf->width, oxcf->height, oxcf->init_framerate);
-    }
-    if (rc->max_gf_interval == 0) {
-      rc->max_gf_interval = vp9_rc_get_default_max_gf_interval(
-          oxcf->init_framerate, rc->min_gf_interval);
-    }
-#else
-    if (rc->min_gf_interval == 0)
-      rc->min_gf_interval = vp9_rc_get_default_min_gf_interval(
-          oxcf->width, oxcf->height, cpi->framerate);
-    if (rc->max_gf_interval == 0)
-      rc->max_gf_interval = vp9_rc_get_default_max_gf_interval(
-          cpi->framerate, rc->min_gf_interval);
-#endif
+  // Set Maximum gf/arf interval
+  rc->max_gf_interval = oxcf->max_gf_interval;
+  rc->min_gf_interval = oxcf->min_gf_interval;
+  if (rc->min_gf_interval == 0)
+    rc->min_gf_interval = vp9_rc_get_default_min_gf_interval(
+        oxcf->width, oxcf->height, cpi->framerate);
+  if (rc->max_gf_interval == 0)
+    rc->max_gf_interval = vp9_rc_get_default_max_gf_interval(
+        cpi->framerate, rc->min_gf_interval);
 
-    // Extended max interval for genuinely static scenes like slide shows.
-    rc->static_scene_max_gf_interval = MAX_STATIC_GF_GROUP_LENGTH;
+  // Extended max interval for genuinely static scenes like slide shows.
+  rc->static_scene_max_gf_interval = MAX_STATIC_GF_GROUP_LENGTH;
 
-    if (rc->max_gf_interval > rc->static_scene_max_gf_interval)
-      rc->max_gf_interval = rc->static_scene_max_gf_interval;
+  if (rc->max_gf_interval > rc->static_scene_max_gf_interval)
+    rc->max_gf_interval = rc->static_scene_max_gf_interval;
 
-    // Clamp min to max
-    rc->min_gf_interval = VPXMIN(rc->min_gf_interval, rc->max_gf_interval);
-
-    if (oxcf->target_level == LEVEL_AUTO) {
-      const uint32_t pic_size = cpi->common.width * cpi->common.height;
-      const uint32_t pic_breadth =
-          VPXMAX(cpi->common.width, cpi->common.height);
-      int i;
-      for (i = 0; i < VP9_LEVELS; ++i) {
-        if (vp9_level_defs[i].max_luma_picture_size >= pic_size &&
-            vp9_level_defs[i].max_luma_picture_breadth >= pic_breadth) {
-          if (rc->min_gf_interval <=
-              (int)vp9_level_defs[i].min_altref_distance) {
-            rc->min_gf_interval =
-                (int)vp9_level_defs[i].min_altref_distance + 1;
-            rc->max_gf_interval =
-                VPXMAX(rc->max_gf_interval, rc->min_gf_interval);
-          }
-          break;
-        }
-      }
-    }
-  }
+  // Clamp min to max
+  rc->min_gf_interval = VPXMIN(rc->min_gf_interval, rc->max_gf_interval);
 }
 
 static void vp9_rc_update_framerate(VP9_COMP *cpi) {
