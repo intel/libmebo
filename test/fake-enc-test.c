@@ -451,6 +451,8 @@ static void display_encode_status (unsigned int bitstream_size) {
   printf ("\n");
 }
 
+static int _prev_temporal_id = 0;
+
 static void
 get_layer_ids (int frame_count, int num_sl, int num_tl,
     int *spatial_id, int *temporal_id)
@@ -460,33 +462,40 @@ get_layer_ids (int frame_count, int num_sl, int num_tl,
   //spatial id
   s_id =  frame_count % num_sl;
 
-  //temporal id
-  if (num_tl > 1) {
-    switch (num_tl) {
-      case 2:
-        if (frame_count % 2 == 0)
-          t_id = 0;
-	else
-          t_id = 1;
-        break;
-      case 3:
-        if (frame_count % 4 == 0)
-          t_id = 0;
-	else if (frame_count % 2 == 0)
-          t_id = 1;
-	else
-          t_id = 2;
-        break;
-      default:
-        printf ("Exit: Not supporting more than 3 temporal layers \n");
-        exit(0);
+  //Increment the temporal_id only when all the spatial
+  //variants are encoded for a particualr frame id
+  if (!(frame_count % num_sl)) {
+    //temporal id
+    if (num_tl > 1) {
+      switch (num_tl) {
+        case 2:
+          if (frame_count % 2 == 0)
+            t_id = 0;
+	  else
+            t_id = 1;
+          break;
+        case 3:
+          if (frame_count % 4 == 0)
+            t_id = 0;
+	  else if (frame_count % 2 == 0)
+            t_id = 1;
+	  else
+            t_id = 2;
+          break;
+        default:
+          printf ("Exit: Not supporting more than 3 temporal layers \n");
+          exit(0);
+      }
+    } else {
+      t_id = 0;
     }
   } else {
-    t_id = 0;
+    t_id = _prev_temporal_id;
   }
 
   *spatial_id = s_id;
   *temporal_id = t_id;
+  _prev_temporal_id = t_id;
 }
 
 static void
