@@ -521,6 +521,8 @@ start_virtual_encode (LibMeboRateController *rc)
    if (enc_params.num_sl > 1 || enc_params.num_tl >1)
      svc_preset = preset - SVC_PRESET_START_INDEX;
 
+   key_frame_period *= enc_params.num_sl;
+
    //Account spatial svc in frame_count
    frame_count = enc_params.framecount * enc_params.num_sl;
 
