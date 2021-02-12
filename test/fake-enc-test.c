@@ -103,13 +103,13 @@ static struct BitrateBounds bitrate_bounds_inter [] = {
 static struct SvcBitrateBounds svc_bitrate_bounds_intra [] = {
         {
                 .layer_bitrate_lower = {
-                        {3586,  3586,  0},
+                        {5957,  5957,  0},
                         {8007,  8007,  0},
                         {17520, 17520, 0},
                 },
                 .layer_bitrate_upper = {
-                        {6486,  6486,  0},
-                        {13766, 13766, 0},
+                        {9884,  9884,  0},
+                        {17241, 17241, 0},
                         {19084, 19084, 0},
                 }
         },
@@ -119,9 +119,9 @@ static struct SvcBitrateBounds svc_bitrate_bounds_intra [] = {
 static struct SvcBitrateBounds svc_bitrate_bounds_inter [] = {
         {
                 .layer_bitrate_lower = {
-                        {1405,  1405,  0},
-                        {3771,  3771,  0},
-                        {3193,  3193,  0},
+                        {4520,  4520,  0},
+                        {4876,  4876,  0},
+                        {4327,  4327,  0},
                 },
                 .layer_bitrate_upper = {
                         {5700,  5700,  0},
