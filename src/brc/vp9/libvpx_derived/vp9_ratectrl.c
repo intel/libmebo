@@ -1734,13 +1734,7 @@ void vp9_rc_get_svc_params(VP9_COMP *cpi) {
   // Key frame is set for any of the following: very first frame, frame flags
   // indicates key, superframe counter hits key frequency, or (non-intra) sync
   // flag is set for spatial layer 0.
-  if ((cm->current_video_frame == 0 && !svc->previous_frame_is_intra_only) ||
-      (cpi->frame_flags & FRAMEFLAGS_KEY) ||
-      (cpi->oxcf.auto_key &&
-       (svc->current_superframe % cpi->oxcf.key_freq == 0) &&
-       !svc->previous_frame_is_intra_only && svc->spatial_layer_id == 0) ||
-      (svc->spatial_layer_sync[0] == 1 && svc->spatial_layer_id == 0)) {
-    cm->frame_type = KEY_FRAME;
+  if (cm->frame_type == KEY_FRAME) {
     rc->source_alt_ref_active = 0;
     if (is_one_pass_cbr_svc(cpi)) {
       if (cm->current_video_frame > 0) vp9_svc_reset_temporal_layers(cpi, 1);
