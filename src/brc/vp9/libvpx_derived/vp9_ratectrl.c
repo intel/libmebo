@@ -1370,7 +1370,14 @@ int vp9_rc_pick_q_and_bounds(const VP9_COMP *cpi, int *bottom_index,
     if (cpi->oxcf.rc_mode == VPX_CBR)
       q = rc_pick_q_and_bounds_one_pass_cbr(cpi, bottom_index, top_index);
   }
-  //Fixme: Add vbr and two pass support
+
+  if (cpi->sf.use_nonrd_pick_mode) {
+    if (q < *bottom_index)
+      *bottom_index = q;
+    else if (q > *top_index)
+      *top_index = q;
+  }
+
   return q;
 }
 
