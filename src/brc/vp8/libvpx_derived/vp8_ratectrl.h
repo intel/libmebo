@@ -23,10 +23,6 @@
 
 #include "vp8_common.h"
 
-void vp8_save_coding_context(VP8_COMP *cpi);
-void vp8_restore_coding_context(VP8_COMP *cpi);
-
-void vp8_setup_key_frame(VP8_COMP *cpi);
 void vp8_update_rate_correction_factors(VP8_COMP *cpi, int damp_var);
 int vp8_regulate_q(VP8_COMP *cpi, int target_bits_per_frame);
 void vp8_adjust_key_frame_context(VP8_COMP *cpi);

@@ -163,14 +163,6 @@ vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
   cpi->total_byte_count += (size);
   cpi->projected_frame_size = (int)(size) << 3;
 
-  if (cpi->oxcf.number_of_layers > 1) {
-    unsigned int i;
-    for (i = cpi->current_layer + 1; i < cpi->oxcf.number_of_layers; ++i) {
-      cpi->layer_context[i].total_byte_count += (size);
-    }
-  }
-
-  
   //Fimxe: Add this field in cpi structure? in vp8 it is the code in encode routine
   //if (!active_worst_qchanged)
   vp8_update_rate_correction_factors(cpi, 2);
@@ -190,45 +182,38 @@ vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
   /* Keep a record from which we can calculate the average Q excluding
    * GF updates and key frames
    */
-  if ((cm->frame_type != VP8_KEY_FRAME) &&
-      ((cpi->oxcf.number_of_layers > 1) ||
-       (!cm->refresh_golden_frame && !cm->refresh_alt_ref_frame))) {
+  if (cm->frame_type != VP8_KEY_FRAME) {
     cpi->ni_frames++;
 
     /* Calculate the average Q for normal inter frames (not key or GFU
      * frames).
      */
-    if (cpi->pass == 2) {
+    /* Damp value for first few frames */
+    if (cpi->ni_frames > 150) {
       cpi->ni_tot_qi += Q;
       cpi->ni_av_qi = (cpi->ni_tot_qi / cpi->ni_frames);
-    } else {
-      /* Damp value for first few frames */
-      if (cpi->ni_frames > 150) {
-        cpi->ni_tot_qi += Q;
-        cpi->ni_av_qi = (cpi->ni_tot_qi / cpi->ni_frames);
-      }
-      /* For one pass, early in the clip ... average the current frame Q
-       * value with the worstq entered by the user as a dampening measure
-       */
-      else {
-        cpi->ni_tot_qi += Q;
-        cpi->ni_av_qi =
-            ((cpi->ni_tot_qi / cpi->ni_frames) + cpi->worst_quality + 1) / 2;
-      }
-
-      /* If the average Q is higher than what was used in the last
-       * frame (after going through the recode loop to keep the frame
-       * size within range) then use the last frame value - 1. The -1
-       * is designed to stop Q and hence the data rate, from
-       * progressively falling away during difficult sections, but at
-       * the same time reduce the number of itterations around the
-       * recode loop.
-       */
-      if (Q > cpi->ni_av_qi) cpi->ni_av_qi = Q - 1;
     }
+    /* For one pass, early in the clip ... average the current frame Q
+     * value with the worstq entered by the user as a dampening measure
+     */
+    else {
+      cpi->ni_tot_qi += Q;
+      cpi->ni_av_qi =
+          ((cpi->ni_tot_qi / cpi->ni_frames) + cpi->worst_quality + 1) / 2;
+    }
+
+    /* If the average Q is higher than what was used in the last
+     * frame (after going through the recode loop to keep the frame
+     * size within range) then use the last frame value - 1. The -1
+     * is designed to stop Q and hence the data rate, from
+     * progressively falling away during difficult sections, but at
+     * the same time reduce the number of itterations around the
+     * recode loop.
+     */
+    if (Q > cpi->ni_av_qi) cpi->ni_av_qi = Q - 1;
   }
 
-    /* Update the buffer level variable. */
+  /* Update the buffer level variable. */
   /* Non-viewable frames are a special case and are treated as pure overhead. */
   if (!cm->show_frame) {
     cpi->bits_off_target -= cpi->projected_frame_size;
@@ -266,55 +251,14 @@ vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
 
   cpi->buffer_level = cpi->bits_off_target;
 
-//Fixme: temporal svc is not yet enabled
-#if 0
-  /* Propagate values to higher temporal layers */
-  if (cpi->oxcf.number_of_layers > 1) {
-    unsigned int i;
+  //Fixme: temporal svc is not yet enabled
 
-    for (i = cpi->current_layer + 1; i < cpi->oxcf.number_of_layers; ++i) {
-      LAYER_CONTEXT *lc = &cpi->layer_context[i];
-      int bits_off_for_this_layer = (int)(lc->target_bandwidth / lc->framerate -
-                                          cpi->projected_frame_size);
-
-      lc->bits_off_target += bits_off_for_this_layer;
-
-      /* Clip buffer level to maximum buffer size for the layer */
-      if (lc->bits_off_target > lc->maximum_buffer_size) {
-        lc->bits_off_target = lc->maximum_buffer_size;
-      }
-
-      lc->total_actual_bits += cpi->projected_frame_size;
-      lc->total_target_vs_actual += bits_off_for_this_layer;
-      lc->buffer_level = lc->bits_off_target;
-    }
-  }
-#endif
-
-    /* Update bits left to the kf and gf groups to account for overshoot
-   * or undershoot on these frames
-   */
-  if (cm->frame_type == VP8_KEY_FRAME) {
-    cpi->twopass.kf_group_bits +=
-        cpi->this_frame_target - cpi->projected_frame_size;
-
-    if (cpi->twopass.kf_group_bits < 0) cpi->twopass.kf_group_bits = 0;
-  } else if (cm->refresh_golden_frame || cm->refresh_alt_ref_frame) {
-    cpi->twopass.gf_group_bits +=
-        cpi->this_frame_target - cpi->projected_frame_size;
-
-    if (cpi->twopass.gf_group_bits < 0) cpi->twopass.gf_group_bits = 0;
-  }
-
-  //Fixme: update frame flags
-  
   /* Dont increment frame counters if this was an altref buffer update
    * not a real frame
    */
   if (cm->show_frame) {
     cm->current_video_frame++;
     cpi->frames_since_key++;
-    cpi->temporal_pattern_counter++;
   }
 }
 
@@ -332,73 +276,6 @@ void vp8_new_framerate(VP8_COMP *cpi, double framerate) {
   cpi->max_gf_interval = ((int)(cpi->output_framerate / 2.0) + 2);
 
   if (cpi->max_gf_interval < 12) cpi->max_gf_interval = 12;
-
-  /* Extended interval for genuinely static scenes */
-  cpi->twopass.static_scene_max_gf_interval = cpi->key_frame_frequency >> 1;
-
-  /* Special conditions when altr ref frame enabled in lagged compress mode */
-  if (cpi->oxcf.play_alternate && cpi->oxcf.lag_in_frames) {
-    if (cpi->max_gf_interval > cpi->oxcf.lag_in_frames - 1) {
-      cpi->max_gf_interval = cpi->oxcf.lag_in_frames - 1;
-    }
-
-    if (cpi->twopass.static_scene_max_gf_interval >
-        cpi->oxcf.lag_in_frames - 1) {
-      cpi->twopass.static_scene_max_gf_interval = cpi->oxcf.lag_in_frames - 1;
-    }
-  }
-
-  if (cpi->max_gf_interval > cpi->twopass.static_scene_max_gf_interval) {
-    cpi->max_gf_interval = cpi->twopass.static_scene_max_gf_interval;
-  }
-}
-
-void vp8_save_coding_context(VP8_COMP *cpi) {
-  CODING_CONTEXT *const cc = &cpi->coding_context;
-
-  /* Stores a snapshot of key state variables which can subsequently be
-   * restored with a call to vp8_restore_coding_context. These functions are
-   * intended for use in a re-code loop in vp8_compress_frame where the
-   * quantizer value is adjusted between loop iterations.
-   */
-
-  cc->frames_since_key = cpi->frames_since_key;
-  cc->filter_level = cpi->common.filter_level;
-  cc->frames_till_gf_update_due = cpi->frames_till_gf_update_due;
-  cc->frames_since_golden = cpi->frames_since_golden;
-
-  cc->this_frame_percent_intra = cpi->this_frame_percent_intra;
-}
-
-void vp8_restore_coding_context(VP8_COMP *cpi) {
-  CODING_CONTEXT *const cc = &cpi->coding_context;
-
-  /* Restore key state variables to the snapshot state stored in the
-   * previous call to vp8_save_coding_context.
-   */
-
-  cpi->frames_since_key = cc->frames_since_key;
-  cpi->common.filter_level = cc->filter_level;
-  cpi->frames_till_gf_update_due = cc->frames_till_gf_update_due;
-  cpi->frames_since_golden = cc->frames_since_golden;
-
-  cpi->this_frame_percent_intra = cc->this_frame_percent_intra;
-}
-
-void vp8_setup_key_frame(VP8_COMP *cpi) {
-  /* Setup for Key frame: */
-
-  cpi->common.filter_level = cpi->common.base_qindex * 3 / 8;
-
-  /* Provisional interval before next GF */
-  if (cpi->auto_gold) {
-    cpi->frames_till_gf_update_due = cpi->baseline_gf_interval;
-  } else {
-    cpi->frames_till_gf_update_due = DEFAULT_GF_INTERVAL;
-  }
-
-  cpi->common.refresh_golden_frame = 1;
-  cpi->common.refresh_alt_ref_frame = 1;
 }
 
 static int estimate_bits_at_q(int frame_kind, int Q, int MBs,
@@ -434,11 +311,11 @@ static void calc_iframe_target_size(VP8_COMP *cpi) {
       target = cpi->oxcf.target_bandwidth * 3 / 2;
     }
   } else {
-    /* if this keyframe was forced, use a more recent Q estimate */
-	  //Current_Working_postion....
-    int Q = (cpi->common.frame_flags & VP8_FRAMEFLAGS_KEY) ? cpi->avg_frame_qindex
-                                                       : cpi->ni_av_qi;
-
+    /* ToDo: if this keyframe was forced, use a more recent Q estimate */
+    //int Q = (cpi->common.frame_flags & VP8_FRAMEFLAGS_KEY) ? cpi->avg_frame_qindex
+    //                                                   : cpi->ni_av_qi;
+    //int Q = cpi->ni_av_qi;
+    int Q = cpi->avg_frame_qindex;
     int initial_boost = 32; /* |3.0 * per_frame_bandwidth| */
     /* Boost depends somewhat on frame rate: only used for 1 layer case. */
     if (cpi->oxcf.number_of_layers == 1) {
@@ -471,7 +348,6 @@ static void calc_iframe_target_size(VP8_COMP *cpi) {
   }
 
   cpi->this_frame_target = (int)target;
-  printf ("CalcIframe : targetsize =%d \n",cpi->this_frame_target);
 
   /* TODO: if we separate rate targeting from Q targeting, move this.
    * Reset the active worst quality to the baseline value for key frames.
@@ -606,9 +482,7 @@ static void calc_gf_params(VP8_COMP *cpi) {
    * This is updated once the real frame size/boost is known.
    */
   if (cpi->oxcf.fixed_q == -1) {
-    if (cpi->pass == 2) { /* 2 Pass */
-      cpi->frames_till_gf_update_due = cpi->baseline_gf_interval;
-    } else { /* 1 Pass */
+      /* 1 Pass */
       cpi->frames_till_gf_update_due = cpi->baseline_gf_interval;
 
       if (cpi->last_boost > 750) cpi->frames_till_gf_update_due++;
@@ -626,24 +500,8 @@ static void calc_gf_params(VP8_COMP *cpi) {
       if (cpi->frames_till_gf_update_due > cpi->max_gf_interval) {
         cpi->frames_till_gf_update_due = cpi->max_gf_interval;
       }
-    }
   } else {
     cpi->frames_till_gf_update_due = cpi->baseline_gf_interval;
-  }
-
-  /* ARF on or off */
-  if (cpi->pass != 2) {
-    /* For now Alt ref is not allowed except in 2 pass modes. */
-    cpi->source_alt_ref_pending = 0;
-
-    /*if ( cpi->oxcf.fixed_q == -1)
-    {
-        if ( cpi->oxcf.play_alternate && (cpi->last_boost > (100 +
-    (AF_THRESH*cpi->frames_till_gf_update_due)) ) )
-            cpi->source_alt_ref_pending = 1;
-        else
-            cpi->source_alt_ref_pending = 0;
-    }*/
   }
 }
 
@@ -651,49 +509,16 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
   int min_frame_target;
   int old_per_frame_bandwidth = cpi->per_frame_bandwidth;
 
-  if (cpi->current_layer > 0) {
-    cpi->per_frame_bandwidth =
-        cpi->layer_context[cpi->current_layer].avg_frame_size_for_layer;
-  }
-
-  min_frame_target = 0;
-
-  if (cpi->pass == 2) {
-    min_frame_target = cpi->min_frame_bandwidth;
-
-    if (min_frame_target < (cpi->av_per_frame_bandwidth >> 5)) {
-      min_frame_target = cpi->av_per_frame_bandwidth >> 5;
-    }
-  } else if (min_frame_target < cpi->per_frame_bandwidth / 4) {
-    min_frame_target = cpi->per_frame_bandwidth / 4;
-  }
-
-  /* Special alt reference frame case */
-  if ((cpi->common.refresh_alt_ref_frame) &&
-      (cpi->oxcf.number_of_layers == 1)) {
-    if (cpi->pass == 2) {
-      /* Per frame bit target for the alt ref frame */
-      cpi->per_frame_bandwidth = cpi->twopass.gf_bits;
-      cpi->this_frame_target = cpi->per_frame_bandwidth;
-    }
-
-    /* One Pass ??? TBD */
-  }
+  min_frame_target = cpi->per_frame_bandwidth / 4;
 
   /* Normal frames (gf,and inter) */
-  else {
-    /* 2 pass */
-    if (cpi->pass == 2) {
-      cpi->this_frame_target = cpi->per_frame_bandwidth;
-    }
-    /* 1 pass */
-    else {
-      int Adjustment;
-      /* Make rate adjustment to recover bits spent in key frame
-       * Test to see if the key frame inter data rate correction
-       * should still be in force
-       */
-      if (cpi->kf_overspend_bits > 0) {
+  /* 1 pass */
+  int Adjustment;
+  /* Make rate adjustment to recover bits spent in key frame
+   * Test to see if the key frame inter data rate correction
+   * should still be in force
+   */
+  if (cpi->kf_overspend_bits > 0) {
         Adjustment = (cpi->kf_bitrate_adjustment <= cpi->kf_overspend_bits)
                          ? cpi->kf_bitrate_adjustment
                          : cpi->kf_overspend_bits;
@@ -713,30 +538,30 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
         if (cpi->this_frame_target < min_frame_target) {
           cpi->this_frame_target = min_frame_target;
         }
-      } else {
+  } else {
         cpi->this_frame_target = cpi->per_frame_bandwidth;
+  }
+
+  /* If appropriate make an adjustment to recover bits spent on a
+   * recent GF
+   */
+  if ((cpi->gf_overspend_bits > 0) &&
+      (cpi->this_frame_target > min_frame_target)) {
+      Adjustment = (cpi->non_gf_bitrate_adjustment <= cpi->gf_overspend_bits)
+                       ? cpi->non_gf_bitrate_adjustment
+                       : cpi->gf_overspend_bits;
+
+      if (Adjustment > (cpi->this_frame_target - min_frame_target)) {
+        Adjustment = (cpi->this_frame_target - min_frame_target);
       }
 
-      /* If appropriate make an adjustment to recover bits spent on a
-       * recent GF
-       */
-      if ((cpi->gf_overspend_bits > 0) &&
-          (cpi->this_frame_target > min_frame_target)) {
-        Adjustment = (cpi->non_gf_bitrate_adjustment <= cpi->gf_overspend_bits)
-                         ? cpi->non_gf_bitrate_adjustment
-                         : cpi->gf_overspend_bits;
+      cpi->gf_overspend_bits -= Adjustment;
+      cpi->this_frame_target -= Adjustment;
+  }
 
-        if (Adjustment > (cpi->this_frame_target - min_frame_target)) {
-          Adjustment = (cpi->this_frame_target - min_frame_target);
-        }
-
-        cpi->gf_overspend_bits -= Adjustment;
-        cpi->this_frame_target -= Adjustment;
-      }
-
-      /* Apply small + and - boosts for non gf frames */
-      if ((cpi->last_boost > 150) && (cpi->frames_till_gf_update_due > 0) &&
-          (cpi->current_gf_interval >= (MIN_GF_INTERVAL << 1))) {
+  /* Apply small + and - boosts for non gf frames */
+  if ((cpi->last_boost > 150) && (cpi->frames_till_gf_update_due > 0) &&
+        (cpi->current_gf_interval >= (MIN_GF_INTERVAL << 1))) {
         /* % Adjustment limited to the range 1% to 10% */
         Adjustment = (cpi->last_boost - 100) >> 5;
 
@@ -763,8 +588,6 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
         } else {
           cpi->this_frame_target -= Adjustment;
         }
-      }
-    }
   }
 
   /* Sanity check that the total sum of adjustments is not above the
@@ -801,8 +624,7 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
          * and adherence to buffering constraints is important to
          * the end usage then adjust the per frame target.
          */
-        if ((cpi->oxcf.end_usage == USAGE_STREAM_FROM_SERVER) &&
-            (cpi->buffer_level < cpi->oxcf.optimal_buffer_level)) {
+        if (cpi->buffer_level < cpi->oxcf.optimal_buffer_level) {
           percent_low =
               (int)((cpi->oxcf.optimal_buffer_level - cpi->buffer_level) /
                     one_percent_bits);
@@ -835,23 +657,12 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
            * hitting the long term clip data rate target is also
            * important.
            */
-          if (cpi->oxcf.end_usage == USAGE_STREAM_FROM_SERVER) {
-            /* Take the smaller of cpi->buffer_level and
-             * cpi->bits_off_target
-             */
-            critical_buffer_level = (cpi->buffer_level < cpi->bits_off_target)
+           /* Take the smaller of cpi->buffer_level and
+            * cpi->bits_off_target
+            */
+           critical_buffer_level = (cpi->buffer_level < cpi->bits_off_target)
                                         ? cpi->buffer_level
                                         : cpi->bits_off_target;
-          }
-          /* For local file playback short term buffering constraints
-           * are less of an issue
-           */
-          else {
-            /* Consider only how we are doing for the clip as a
-             * whole
-             */
-            critical_buffer_level = cpi->bits_off_target;
-          }
 
           /* Set the active worst quality based upon the selected
            * buffer fullness number.
@@ -885,8 +696,7 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
       } else {
         int percent_high = 0;
 
-        if ((cpi->oxcf.end_usage == USAGE_STREAM_FROM_SERVER) &&
-            (cpi->buffer_level > cpi->oxcf.optimal_buffer_level)) {
+        if (cpi->buffer_level > cpi->oxcf.optimal_buffer_level) {
           percent_high =
               (int)((cpi->buffer_level - cpi->oxcf.optimal_buffer_level) /
                     one_percent_bits);
@@ -932,65 +742,10 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
       cpi->active_worst_quality = cpi->worst_quality;
     }
 
-    /* Special trap for constrained quality mode
-     * "active_worst_quality" may never drop below cq level
-     * for any frame type.
-     */
-    if (cpi->oxcf.end_usage == USAGE_CONSTRAINED_QUALITY &&
-        cpi->active_worst_quality < cpi->cq_target_quality) {
-      cpi->active_worst_quality = cpi->cq_target_quality;
-    }
-  }
-
-  /* Test to see if we have to drop a frame
-   * The auto-drop frame code is only used in buffered mode.
-   * In unbufferd mode (eg vide conferencing) the descision to
-   * code or drop a frame is made outside the codec in response to real
-   * world comms or buffer considerations.
-   */
-  if (cpi->drop_frames_allowed &&
-      (cpi->oxcf.end_usage == USAGE_STREAM_FROM_SERVER) &&
-      ((cpi->common.frame_type != VP8_KEY_FRAME))) {
-    /* Check for a buffer underun-crisis in which case we have to drop
-     * a frame
-     */
-    if ((cpi->buffer_level < 0)) {
-#if 0
-            FILE *f = fopen("dec.stt", "a");
-            fprintf(f, "%10d %10d %10d %10d ***** BUFFER EMPTY\n",
-                    (int) cpi->common.current_video_frame,
-                    cpi->decimation_factor, cpi->common.horiz_scale,
-                    (cpi->buffer_level * 100) / cpi->oxcf.optimal_buffer_level);
-            fclose(f);
-#endif
-      cpi->drop_frame = 1;
-
-      /* Update the buffer level variable. */
-      cpi->bits_off_target += cpi->av_per_frame_bandwidth;
-      if (cpi->bits_off_target > cpi->oxcf.maximum_buffer_size) {
-        cpi->bits_off_target = (int)cpi->oxcf.maximum_buffer_size;
-      }
-      cpi->buffer_level = cpi->bits_off_target;
-
-      if (cpi->oxcf.number_of_layers > 1) {
-        unsigned int i;
-
-        // Propagate bits saved by dropping the frame to higher layers.
-        for (i = cpi->current_layer + 1; i < cpi->oxcf.number_of_layers; ++i) {
-          VP8_LAYER_CONTEXT *lc = &cpi->layer_context[i];
-          lc->bits_off_target += (int)(lc->target_bandwidth / lc->framerate);
-          if (lc->bits_off_target > lc->maximum_buffer_size) {
-            lc->bits_off_target = lc->maximum_buffer_size;
-          }
-          lc->buffer_level = lc->bits_off_target;
-        }
-      }
-    }
   }
 
   /* Adjust target frame size for Golden Frames: */
-  if (cpi->oxcf.error_resilient_mode == 0 &&
-      (cpi->frames_till_gf_update_due == 0) && !cpi->drop_frame) {
+  if ((cpi->frames_till_gf_update_due == 0) && !cpi->drop_frame) {
     if (!cpi->gf_update_onepass_cbr) {
       int Q = (cpi->oxcf.fixed_q < 0) ? cpi->last_q[VP8_INTER_FRAME]
                                       : cpi->oxcf.fixed_q;
@@ -1027,21 +782,6 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
         }
       }
 
-#if 0
-
-          /* Debug stats */
-          if (0) {
-              FILE *f;
-
-              f = fopen("gf_useaget.stt", "a");
-              fprintf(f, " %8ld %10ld %10ld %10ld %10ld\n",
-                      cpi->common.current_video_frame,  cpi->gfu_boost,
-                      GFQ_ADJUSTMENT, cpi->gfu_boost, gf_frame_useage);
-              fclose(f);
-          }
-
-#endif
-
       if (cpi->common.refresh_golden_frame == 1) {
         if (cpi->auto_adjust_gold_quantizer) {
           calc_gf_params(cpi);
@@ -1053,12 +793,6 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
          */
         if (!cpi->source_alt_ref_active) {
           if (cpi->oxcf.fixed_q < 0) {
-            if (cpi->pass == 2) {
-              /* The spend on the GF is defined in the two pass
-               * code for two pass encodes
-               */
-              cpi->this_frame_target = cpi->per_frame_bandwidth;
-            } else {
               int Boost = cpi->last_boost;
               int frames_in_section = cpi->frames_till_gf_update_due + 1;
               int allocation_chunks = (frames_in_section * 100) + (Boost - 100);
@@ -1080,7 +814,6 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
                 cpi->this_frame_target =
                     (Boost * bits_in_section) / allocation_chunks;
               }
-            }
           } else {
             cpi->this_frame_target =
                 (estimate_bits_at_q(1, Q, cpi->common.MBs, 1.0) *
@@ -1118,7 +851,6 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
   }
 
   cpi->per_frame_bandwidth = old_per_frame_bandwidth;
-  printf ("CalcPframe : cpi->per_frame_bandwidth =%d targetsize =%d  \n",cpi->per_frame_bandwidth, cpi->this_frame_target);
 }
 
 void vp8_update_rate_correction_factors(VP8_COMP *cpi, int damp_var) {
@@ -1204,120 +936,58 @@ void vp8_update_rate_correction_factors(VP8_COMP *cpi, int damp_var) {
   }
 }
 
-static int limit_q_cbr_inter(int last_q, int current_q) {
-  int limit_down = 12;
-  if (last_q - current_q > limit_down)
-    return (last_q - limit_down);
-  else
-    return current_q;
-}
-
 int vp8_regulate_q(VP8_COMP *cpi, int target_bits_per_frame) {
   int Q = cpi->active_worst_quality;
+  int i;
+  int last_error = INT_MAX;
+  int target_bits_per_mb;
+  int bits_per_mb_at_this_q;
+  double correction_factor;
 
-  if (cpi->force_maxqp == 1) {
-    cpi->active_worst_quality = cpi->worst_quality;
-    return cpi->worst_quality;
-  }
-
-  if (cpi->oxcf.fixed_q >= 0) {
-    Q = cpi->oxcf.fixed_q;
-
-    if (cpi->common.frame_type == VP8_KEY_FRAME) {
-      Q = cpi->oxcf.key_q;
-    } else if (cpi->oxcf.number_of_layers == 1 &&
-               cpi->common.refresh_alt_ref_frame &&
-               !cpi->gf_noboost_onepass_cbr) {
-      Q = cpi->oxcf.alt_q;
-    } else if (cpi->oxcf.number_of_layers == 1 &&
-               cpi->common.refresh_golden_frame &&
-               !cpi->gf_noboost_onepass_cbr) {
-      Q = cpi->oxcf.gold_q;
-    }
+  /* Select the appropriate correction factor based upon type of frame. */
+  if (cpi->common.frame_type == VP8_KEY_FRAME) {
+    correction_factor = cpi->key_frame_rate_correction_factor;
   } else {
-    int i;
-    int last_error = INT_MAX;
-    int target_bits_per_mb;
-    int bits_per_mb_at_this_q;
-    double correction_factor;
-
-    /* Select the appropriate correction factor based upon type of frame. */
-    if (cpi->common.frame_type == VP8_KEY_FRAME) {
-      correction_factor = cpi->key_frame_rate_correction_factor;
+    if (cpi->oxcf.number_of_layers == 1 && !cpi->gf_noboost_onepass_cbr &&
+        (cpi->common.refresh_alt_ref_frame ||
+         cpi->common.refresh_golden_frame)) {
+      correction_factor = cpi->gf_rate_correction_factor;
     } else {
-      if (cpi->oxcf.number_of_layers == 1 && !cpi->gf_noboost_onepass_cbr &&
-          (cpi->common.refresh_alt_ref_frame ||
-           cpi->common.refresh_golden_frame)) {
-        correction_factor = cpi->gf_rate_correction_factor;
-      } else {
-        correction_factor = cpi->rate_correction_factor;
-      }
+      correction_factor = cpi->rate_correction_factor;
     }
-
-    /* Calculate required scaling factor based on target frame size and
-     * size of frame produced using previous Q
-     */
-    if (target_bits_per_frame >= (INT_MAX >> BPER_MB_NORMBITS)) {
-      /* Case where we would overflow int */
-      target_bits_per_mb = (target_bits_per_frame / cpi->common.MBs)
-                           << BPER_MB_NORMBITS;
-    } else {
-      target_bits_per_mb =
-          (target_bits_per_frame << BPER_MB_NORMBITS) / cpi->common.MBs;
-    }
-
-    i = cpi->active_best_quality;
-
-    do {
-      bits_per_mb_at_this_q =
-          (int)(.5 +
-                correction_factor * vp8_bits_per_mb[cpi->common.frame_type][i]);
-
-      if (bits_per_mb_at_this_q <= target_bits_per_mb) {
-        if ((target_bits_per_mb - bits_per_mb_at_this_q) <= last_error) {
-          Q = i;
-        } else {
-          Q = i - 1;
-        }
-
-        break;
-      } else {
-        last_error = bits_per_mb_at_this_q - target_bits_per_mb;
-      }
-    } while (++i <= cpi->active_worst_quality);
-
-#if 0
-    //Fixme:
-    /* If we are at MAXQ then enable Q over-run which seeks to claw
-     * back additional bits through things like the RD multiplier
-     * and zero bin size.
-     */
-    if (Q >= VP8_MAXQ) {
-      int zbin_oqmax;
-
-      if (cpi->common.frame_type == VP8_KEY_FRAME) {
-        zbin_oqmax = 0;
-      } else if (cpi->oxcf.number_of_layers == 1 &&
-                 !cpi->gf_noboost_onepass_cbr &&
-                 (cpi->common.refresh_alt_ref_frame ||
-                  (cpi->common.refresh_golden_frame &&
-                   !cpi->source_alt_ref_active))) {
-        zbin_oqmax = 16;
-      } else {
-        zbin_oqmax = ZBIN_OQ_MAX;
-      }
-
-      //Fixeme?: removed cpi->mb.zbin_over_quant << zbin_oqmax
-      //
-    }
-#endif
   }
 
-  // Limit decrease in Q for 1 pass CBR screen content mode.
-  if (cpi->common.frame_type != VP8_KEY_FRAME && cpi->pass == 0 &&
-      cpi->oxcf.end_usage == USAGE_STREAM_FROM_SERVER &&
-      cpi->oxcf.screen_content_mode)
-    Q = limit_q_cbr_inter(cpi->last_q[1], Q);
+  /* Calculate required scaling factor based on target frame size and
+   * size of frame produced using previous Q
+   */
+  if (target_bits_per_frame >= (INT_MAX >> BPER_MB_NORMBITS)) {
+    /* Case where we would overflow int */
+    target_bits_per_mb = (target_bits_per_frame / cpi->common.MBs)
+                         << BPER_MB_NORMBITS;
+  } else {
+    target_bits_per_mb =
+        (target_bits_per_frame << BPER_MB_NORMBITS) / cpi->common.MBs;
+  }
+
+  i = cpi->active_best_quality;
+
+  do {
+     bits_per_mb_at_this_q =
+         (int)(.5 +
+              correction_factor * vp8_bits_per_mb[cpi->common.frame_type][i]);
+
+     if (bits_per_mb_at_this_q <= target_bits_per_mb) {
+       if ((target_bits_per_mb - bits_per_mb_at_this_q) <= last_error) {
+         Q = i;
+       } else {
+         Q = i - 1;
+       }
+
+       break;
+    } else {
+      last_error = bits_per_mb_at_this_q - target_bits_per_mb;
+    }
+  } while (++i <= cpi->active_worst_quality);
 
   return Q;
 }
@@ -1338,7 +1008,7 @@ static int estimate_keyframe_frequency(VP8_COMP *cpi) {
     int key_freq = cpi->oxcf.key_freq > 0 ? cpi->oxcf.key_freq : 1;
     av_key_frame_frequency = 1 + (int)cpi->output_framerate * 2;
 
-    if (cpi->oxcf.auto_key && av_key_frame_frequency > key_freq) {
+    if (av_key_frame_frequency > key_freq) {
       av_key_frame_frequency = key_freq;
     }
 
@@ -1405,64 +1075,40 @@ void vp8_adjust_key_frame_context(VP8_COMP *cpi) {
 
 void vp8_compute_frame_size_bounds(VP8_COMP *cpi, int *frame_under_shoot_limit,
                                    int *frame_over_shoot_limit) {
-  /* Set-up bounds on acceptable frame size: */
-  if (cpi->oxcf.fixed_q >= 0) {
-    /* Fixed Q scenario: frame size never outranges target
-     * (there is no target!)
-     */
-    *frame_under_shoot_limit = 0;
-    *frame_over_shoot_limit = INT_MAX;
-  } else {
-    const int64_t this_frame_target = cpi->this_frame_target;
-    int64_t over_shoot_limit, under_shoot_limit;
+  const int64_t this_frame_target = cpi->this_frame_target;
+  int64_t over_shoot_limit, under_shoot_limit;
 
-    if (cpi->common.frame_type == VP8_KEY_FRAME) {
+  if (cpi->common.frame_type == VP8_KEY_FRAME) {
+    over_shoot_limit = this_frame_target * 9 / 8;
+    under_shoot_limit = this_frame_target * 7 / 8;
+  } else {
+    if (cpi->oxcf.number_of_layers > 1 || cpi->common.refresh_alt_ref_frame ||
+        cpi->common.refresh_golden_frame) {
       over_shoot_limit = this_frame_target * 9 / 8;
       under_shoot_limit = this_frame_target * 7 / 8;
     } else {
-      if (cpi->oxcf.number_of_layers > 1 || cpi->common.refresh_alt_ref_frame ||
-          cpi->common.refresh_golden_frame) {
-        over_shoot_limit = this_frame_target * 9 / 8;
-        under_shoot_limit = this_frame_target * 7 / 8;
-      } else {
-        /* For CBR take buffer fullness into account */
-        if (cpi->oxcf.end_usage == USAGE_STREAM_FROM_SERVER) {
-          if (cpi->buffer_level >= ((cpi->oxcf.optimal_buffer_level +
-                                     cpi->oxcf.maximum_buffer_size) >>
-                                    1)) {
-            /* Buffer is too full so relax overshoot and tighten
-             * undershoot
-             */
-            over_shoot_limit = this_frame_target * 12 / 8;
-            under_shoot_limit = this_frame_target * 6 / 8;
-          } else if (cpi->buffer_level <=
-                     (cpi->oxcf.optimal_buffer_level >> 1)) {
-            /* Buffer is too low so relax undershoot and tighten
-             * overshoot
-             */
-            over_shoot_limit = this_frame_target * 10 / 8;
-            under_shoot_limit = this_frame_target * 4 / 8;
-          } else {
-            over_shoot_limit = this_frame_target * 11 / 8;
-            under_shoot_limit = this_frame_target * 5 / 8;
-          }
+      /* For CBR take buffer fullness into account */
+        if (cpi->buffer_level >= ((cpi->oxcf.optimal_buffer_level +
+                                  cpi->oxcf.maximum_buffer_size) >>
+                                  1)) {
+          /* Buffer is too full so relax overshoot and tighten
+           * undershoot
+           */
+          over_shoot_limit = this_frame_target * 12 / 8;
+          under_shoot_limit = this_frame_target * 6 / 8;
+        } else if (cpi->buffer_level <=
+                   (cpi->oxcf.optimal_buffer_level >> 1)) {
+          /* Buffer is too low so relax undershoot and tighten
+           * overshoot
+           */
+          over_shoot_limit = this_frame_target * 10 / 8;
+          under_shoot_limit = this_frame_target * 4 / 8;
+        } else {
+          over_shoot_limit = this_frame_target * 11 / 8;
+          under_shoot_limit = this_frame_target * 5 / 8;
         }
-        /* VBR and CQ mode */
-        /* Note that tighter restrictions here can help quality
-         * but hurt encode speed
-         */
-        else {
-          /* Stron overshoot limit for constrained quality */
-          if (cpi->oxcf.end_usage == USAGE_CONSTRAINED_QUALITY) {
-            over_shoot_limit = this_frame_target * 11 / 8;
-            under_shoot_limit = this_frame_target * 2 / 8;
-          } else {
-            over_shoot_limit = this_frame_target * 11 / 8;
-            under_shoot_limit = this_frame_target * 5 / 8;
-          }
-        }
-      }
     }
+  }
 
     /* For very small rate targets where the fractional adjustment
      * (eg * 7/8) may be tiny make sure there is at least a minimum
@@ -1475,7 +1121,6 @@ void vp8_compute_frame_size_bounds(VP8_COMP *cpi, int *frame_under_shoot_limit,
     if (over_shoot_limit > INT_MAX) over_shoot_limit = INT_MAX;
     *frame_under_shoot_limit = (int)under_shoot_limit;
     *frame_over_shoot_limit = (int)over_shoot_limit;
-  }
 }
 
 /* return of 0 means drop frame */
@@ -1495,104 +1140,16 @@ int vp8_pick_frame_size(VP8_COMP *cpi) {
   }
   return 1;
 }
-// If this just encoded frame (mcomp/transform/quant, but before loopfilter and
+
+// Libvpx: If this just encoded frame (mcomp/transform/quant, but before loopfilter and
 // pack_bitstream) has large overshoot, and was not being encoded close to the
 // max QP, then drop this frame and force next frame to be encoded at max QP.
 // Allow this for screen_content_mode = 2, or if drop frames is allowed.
 // TODO(marpan): Should do this exit condition during the encode_frame
 // (i.e., halfway during the encoding of the frame) to save cycles.
+//
+// LibMebo: We are netither using screen_content_mode nor allowing drop frames
 int vp8_drop_encodedframe_overshoot(VP8_COMP *cpi, int Q) {
-  int force_drop_overshoot = 0;
-
-  if (cpi->common.frame_type != VP8_KEY_FRAME &&
-      (cpi->oxcf.screen_content_mode == 2 ||
-       (cpi->drop_frames_allowed &&
-        (force_drop_overshoot ||
-         (cpi->rate_correction_factor < (8.0f * MIN_BPB_FACTOR) &&
-          cpi->frames_since_last_drop_overshoot > (int)cpi->framerate))))) {
-    // Note: the "projected_frame_size" from encode_frame() only gives estimate
-    // of mode/motion vector rate (in non-rd mode): so below we only require
-    // that projected_frame_size is somewhat greater than per-frame-bandwidth,
-    // but add additional condition with high threshold on prediction residual.
-
-    // QP threshold: only allow dropping if we are not close to qp_max.
-    int thresh_qp = 3 * cpi->worst_quality >> 2;
-    // Rate threshold, in bytes.
-    int thresh_rate = 2 * (cpi->av_per_frame_bandwidth >> 3);
-    // Threshold for the average (over all macroblocks) of the pixel-sum
-    // residual error over 16x16 block.
-    int thresh_pred_err_mb = (200 << 4);
-    
-    //Fixme: Workaround
-    //int pred_err_mb = (int)(cpi->mb.prediction_error / cpi->common.MBs);
-    int pred_err_mb = 0;
-
-    // Reduce/ignore thresh_rate if pred_err_mb much larger than its threshold,
-    // give more weight to pred_err metric for overshoot detection.
-    if (cpi->drop_frames_allowed && pred_err_mb > (thresh_pred_err_mb << 4))
-      thresh_rate = thresh_rate >> 3;
-    if ((Q < thresh_qp && cpi->projected_frame_size > thresh_rate &&
-         pred_err_mb > thresh_pred_err_mb &&
-         pred_err_mb > 2 * cpi->last_pred_err_mb) ||
-        force_drop_overshoot) {
-      unsigned int i;
-      double new_correction_factor;
-      int target_bits_per_mb;
-      const int target_size = cpi->av_per_frame_bandwidth;
-      // Flag to indicate we will force next frame to be encoded at max QP.
-      cpi->force_maxqp = 1;
-      // Reset the buffer levels.
-      cpi->buffer_level = cpi->oxcf.optimal_buffer_level;
-      cpi->bits_off_target = cpi->oxcf.optimal_buffer_level;
-      // Compute a new rate correction factor, corresponding to the current
-      // target frame size and max_QP, and adjust the rate correction factor
-      // upwards, if needed.
-      // This is to prevent a bad state where the re-encoded frame at max_QP
-      // undershoots significantly, and then we end up dropping every other
-      // frame because the QP/rate_correction_factor may have been too low
-      // before the drop and then takes too long to come up.
-      if (target_size >= (INT_MAX >> BPER_MB_NORMBITS)) {
-        target_bits_per_mb = (target_size / cpi->common.MBs)
-                             << BPER_MB_NORMBITS;
-      } else {
-        target_bits_per_mb =
-            (target_size << BPER_MB_NORMBITS) / cpi->common.MBs;
-      }
-      // Rate correction factor based on target_size_per_mb and max_QP.
-      new_correction_factor =
-          (double)target_bits_per_mb /
-          (double)vp8_bits_per_mb[VP8_INTER_FRAME][cpi->worst_quality];
-      if (new_correction_factor > cpi->rate_correction_factor) {
-        cpi->rate_correction_factor =
-            VPXMIN(2.0 * cpi->rate_correction_factor, new_correction_factor);
-      }
-      if (cpi->rate_correction_factor > MAX_BPB_FACTOR) {
-        cpi->rate_correction_factor = MAX_BPB_FACTOR;
-      }
-      // Drop this frame: update frame counters.
-      cpi->common.current_video_frame++;
-      cpi->frames_since_key++;
-      cpi->temporal_pattern_counter++;
-      cpi->frames_since_last_drop_overshoot = 0;
-      if (cpi->oxcf.number_of_layers > 1) {
-        // Set max_qp and rate correction for all temporal layers if overshoot
-        // is detected.
-        for (i = 0; i < cpi->oxcf.number_of_layers; ++i) {
-          VP8_LAYER_CONTEXT *lc = &cpi->layer_context[i];
-          lc->force_maxqp = 1;
-          lc->frames_since_last_drop_overshoot = 0;
-          lc->rate_correction_factor = cpi->rate_correction_factor;
-        }
-      }
-      return 1;
-    }
-    cpi->force_maxqp = 0;
-    cpi->frames_since_last_drop_overshoot++;
-
-    return 0;
-  }
-  cpi->force_maxqp = 0;
   cpi->frames_since_last_drop_overshoot++;
-
   return 0;
 }

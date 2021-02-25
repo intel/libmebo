@@ -32,12 +32,12 @@ typedef struct _VP8RateControlRtcConfig {
   int ss_number_layers;
   // Number of temporal layers
   int ts_number_layers;
-  int max_quantizers[VPX_MAX_LAYERS];
-  int min_quantizers[VPX_MAX_LAYERS];
-  int scaling_factor_num[VPX_SS_MAX_LAYERS];
-  int scaling_factor_den[VPX_SS_MAX_LAYERS];
-  int layer_target_bitrate[VPX_MAX_LAYERS];
-  int ts_rate_decimator[VPX_TS_MAX_LAYERS];
+  int max_quantizers[VP8_MAX_LAYERS];
+  int min_quantizers[VP8_MAX_LAYERS];
+  int scaling_factor_num[VP8_SS_MAX_LAYERS];
+  int scaling_factor_den[VP8_SS_MAX_LAYERS];
+  int layer_target_bitrate[VP8_MAX_LAYERS];
+  int ts_rate_decimator[VP8_TS_MAX_LAYERS];
 } VP8RateControlRtcConfig;
 
 typedef struct _VP8FrameParamsQpRTC {
