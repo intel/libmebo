@@ -49,4 +49,3 @@ loc change.
 Gstreamer: VP9 Encode: Add software based BitRate control: https://cgit.freedesktop.org/~sree/gstreamer-vaapi/commit/?h=VP9_SVC_and_SoftwareBRC&id=355f16bdb32965425b274aa082c1334b0edd5992
 
 ChromeOS/Chromium: https://chromium-review.googlesource.com/c/chromium/src/+/2099522
-JIRA: https://jira.devtools.intel.com/browse/CHRMOS-8863

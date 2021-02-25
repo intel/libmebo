@@ -14,13 +14,12 @@ libmebo source code is available at <https://github.com/intel/libmebo>
 
 ### Details
 
-The libmebo project is still in a POC state. Currently, we have added only a VP9 BRC algorithm derived from libvpx and wrapped it with a libmebo API. We have already implemented the concept of using software brc with hardware encoder in chromium as part of the ChromeOS project [1].
-But that solution was very chromium specific and it is required to link with a static libvpx library. The purpose of libmebo is to standardize the above POC with a generic interface which can be used with other media frameworks and encoder projects.
+Libmebo supports BRC algorithms for VP8, VP9 & AV1(experimental) codecs. Currently, we are focussing on video-conferencing applications and the only supported BRC model is Constant Bit Rate mode. The VP8 & VP9 brc algorithms are derived from the libvpx library [1]. A Work-in-progress algorithm is available for AV1 which is derived from the aom reference implementation [2]. Libmebo can support multiple implementations for the same codec too. We have already implemented the concept of using software brc with hardware encoder in chromium as part of the ChromeOS project [3]. Also, we have a sample middleware implementation to showcase the libmebo usage [4].
 
-We do have a sample middleware implementation to showcase the libmebo usage [2]
-
-[1] https://bugs.chromium.org/p/chromium/issues/detail?id=1060775 \
-[2] https://cgit.freedesktop.org/~sree/gstreamer-vaapi/commit/?h=libmebo&id=4d9af2f25bad1d3345ef629beddce11c28e17024 \
+[1] https://chromium.googlesource.com/webm/libvpx/ \
+[2] https://aomedia.googlesource.com/aom/ \
+[3] https://bugs.chromium.org/p/chromium/issues/detail?id=1060775 \
+[4] https://cgit.freedesktop.org/~sree/gstreamer-vaapi/commit/?h=libmebo&id=4d9af2f25bad1d3345ef629beddce11c28e17024 \
 
 ### How to build & install
 
