@@ -59,6 +59,7 @@ Overview
  * LibMeboRateController *rc;
  * LibMeboRateControllerConfig rc_config;
  * LibMeboRCFrameParams rc_frame_param;
+ * LibMeboStatus status;
  *
  * //Initialize the rc_config with required parameters
  * __InitializeConfig(rc_cfg);
@@ -68,41 +69,56 @@ Overview
  *
  * //Initialize the libmebo instance with the rc_config
  * status = libmebo_rate_controller_init (rc, &rc_config);
+ * assert (status == LIBMEBO_STATUS_SUCCESS);
  *
  * //LibMebo in action
  * while (frame_to_encode) {
- *  if (rc_config_changed)
- *     libmebo_rate_controller_update_config (rc, &rc_config);
+ *   if (rc_config_changed) {
+ *     status = libmebo_rate_controller_update_config (rc, &rc_config);
+ *     assert (status == LIBMEBO_STATUS_SUCCESS);
+ *   }
  *
  *  //Initialize the per-frame parameters (frame_type & layer ids)
  *  __InitializeRCFrameParams (rc_frame_param);
  *
  *  //Compute the QP
- *  libmebo_rate_controller_compute_qp (rc, rc_frame_param);
+ *  status = libmebo_rate_controller_compute_qp (rc, rc_frame_param);
+ *  assert (status == LIBMEBO_STATUS_SUCCESS);
  *
  *  //Retrieve the QP for the next frame to be encoded
- *  qp = libmebo_rate_controller_get_qp (rc);
+ *  status = libmebo_rate_controller_get_qp (rc, &qp);
+ *  assert (status == LIBMEBO_STATUS_SUCCESS);
  *
  *  // Optional:libmebo can also recommend the loop-filter strength
- *  lf =  libmebo_rate_contoller_get_loop_filter_level (rc);
+ *  status = libmebo_rate_contoller_get_loop_filter_level (rc, &lf);
+ * 
+ * // Ensure the status == LIBMEBO_STATUS_SUCCESS before using
+ * // the loop filter level since some algos are not supporting this API
  *
  *  //Encoder implementation that running in CQP mode
  *  __EncodeBitStream(qp, [lf])
  *
  *  //Update libmebo instance with encoded frame size
- *  libmebo_rate_controller_update_frame_size (EncFrameSize);
+ *  status = libmebo_rate_controller_post_encode_update (rc, EncFrameSize);
+ *  assert (status == LIBMEBO_STATUS_SUCCESS);
  * }
  *
 */
+
+typedef void* BrcCodecEnginePtr;
 
 /** 
  * Return status type of libmebo APIs
  */
 typedef enum {
   LIBMEBO_STATUS_SUCCESS,
+  LIBMEBO_STATUS_WARNING,
+  LIBMEBO_STATUS_ERROR,
   LIBMEBO_STATUS_FAILED,
   LIBMEBO_STATUS_INVALID_PARAM,
   LIBMEBO_STATUS_UNSUPPORTED_CODEC,
+  LIBMEBO_STATUS_UNIMPLEMENTED,
+  LIBMEBO_STATUS_UNKNOWN,
 } LibMeboStatus;
 
 /** 
@@ -256,6 +272,11 @@ typedef struct _LibMeboRateControllerConfig {
    * \brief  maximum allowed bitrate for any intra frame in % of bitrate target
    */
   int max_intra_bitrate_pct;
+ 
+  /**
+   * \brief  maximum allowed bitrate for any inter frame in % of bitrate target
+   */
+  int max_inter_bitrate_pct;
 
   /** \brief framerate of the stream */
   double framerate;
@@ -337,7 +358,8 @@ typedef struct _LibMeboRateController {
  * \returns  Returns a pointer to LibMeboRateController, or NULL
  *           if fails to create the controller instance.
  */
-LibMeboRateController * libmebo_rate_controller_new (LibMeboCodecType codec_type);
+LibMeboRateController *
+libmebo_rate_controller_new (LibMeboCodecType codec_type);
 
 /**
  * \brief libmebo_rate_controller_init:
@@ -350,8 +372,9 @@ LibMeboRateController * libmebo_rate_controller_new (LibMeboCodecType codec_type
  *
  * \returns  Returns a LibMeboStatus
  */
-LibMeboStatus libmebo_rate_controller_init (LibMeboRateController *rc,
-                                            LibMeboRateControllerConfig *rc_config);
+LibMeboStatus
+libmebo_rate_controller_init (LibMeboRateController *rc,
+                              LibMeboRateControllerConfig *rc_config);
 
 /**
  * libmebo_rate_controller_free
@@ -373,11 +396,12 @@ void libmebo_rate_controller_free (LibMeboRateController *rc);
  *
  * \returns  Returns a LibMeboStatus
  */
-LibMeboStatus libmebo_rate_controller_update_config (LibMeboRateController *rc,
+LibMeboStatus
+libmebo_rate_controller_update_config (LibMeboRateController *rc,
                                                      LibMeboRateControllerConfig*rc_cfg);
 
 /**
- * libmebo_rate_controller_update_frame_size:
+ * libmebo_rate_controller_post_encode_update:
  *
  * This is a post-encode operation.
  * Update the currently encoded frame's size at #rc instance.
@@ -385,8 +409,10 @@ LibMeboStatus libmebo_rate_controller_update_config (LibMeboRateController *rc,
  * \param[in]    rc                  the LibMeboRateController to update framesize
  * \param[in]    encoded_frame_size  size of the compressed frame
  *
+ * \returns  Returns a LibMeboStatus
  */
-void libmebo_rate_controller_update_frame_size (LibMeboRateController *rc,
+LibMeboStatus
+libmebo_rate_controller_post_encode_update (LibMeboRateController *rc,
                                                 uint64_t encoded_frame_size);
 
 /**
@@ -398,9 +424,12 @@ void libmebo_rate_controller_update_frame_size (LibMeboRateController *rc,
  * \param[in]    rc               the LibMeboRateController
  * \param[in]    rc_frame_params  current frame params
  *
+ * \returns  Returns a LibMeboStatus
+ *
  */
-void libmebo_rate_controller_compute_qp (LibMeboRateController *rc,
-                                         LibMeboRCFrameParams rc_frame_params);
+LibMeboStatus
+libmebo_rate_controller_compute_qp (LibMeboRateController *rc,
+                                    LibMeboRCFrameParams rc_frame_params);
 
 /**
  * libmebo_rate_controller_get_qp:
@@ -408,10 +437,12 @@ void libmebo_rate_controller_compute_qp (LibMeboRateController *rc,
  * Retrieve the current qp estimate from libmebo instance
  *
  * \param[in]    rc               the LibMeboRateController instance
+ * \param[out]   qp               Retruns proposed qp for the current frame
  *
- * \returns  Returns the QP value to use for the next frame encode
+ * \returns  LibMeboStatus code
  */
-int libmebo_rate_controller_get_qp(LibMeboRateController *rc);
+LibMeboStatus
+libmebo_rate_controller_get_qp(LibMeboRateController *rc, int *qp);
 
 /**
  * libmebo_rate_contoller_get_loop_filter_level:
@@ -419,11 +450,13 @@ int libmebo_rate_controller_get_qp(LibMeboRateController *rc);
  * Retrieve the current loop filter strength estimate
  * from libmebo instance
  *
- * \param[in]    rc               the LibMeboRateController instance
+ * \param[in]    rc               The LibMeboRateController instance
+ * \param[out]   lf               Retruns proposed loop-filter level for the current frame
  *
- * \returns  Returns the LF value to use for the next frame encode
+ * \return Retruns LibMeboStatus code
  */
-int libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc);
+LibMeboStatus
+libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc, int *lf);
 
 /**@}*/
 #endif

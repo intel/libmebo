@@ -48,8 +48,9 @@ static inline int calc_mi_size(int len) {
 
 /*===== BRC functions exposed to libs implementation ========= */
 
-
-void brc_av1_post_encode_update(AV1RateControlRTC *rtc,uint64_t encoded_frame_size) {
+LibMeboStatus
+brc_av1_post_encode_update(BrcCodecEnginePtr engine_ptr, uint64_t encoded_frame_size) {
+  AV1RateControlRTC *rtc = (AV1RateControlRTC *) engine_ptr;
   AV1_COMP *cpi = &rtc->cpi_;
   av1_rc_postencode_update(cpi, encoded_frame_size);
 
@@ -60,16 +61,20 @@ void brc_av1_post_encode_update(AV1RateControlRTC *rtc,uint64_t encoded_frame_si
   //taken from encode_frame_to_data_rate()
   if (cpi->svc.spatial_layer_id == cpi->svc.number_spatial_layers - 1)
     cpi->svc.num_encoded_top_layer++;
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-
-int brc_av1_get_qp(AV1RateControlRTC *rtc) {
+LibMeboStatus
+brc_av1_get_qp(BrcCodecEnginePtr engine_ptr, int *qp) {
+  AV1RateControlRTC *rtc = (AV1RateControlRTC *) engine_ptr;
   AV1_COMP *cpi = &rtc->cpi_;
-  return cpi->common.quant_params.base_qindex;
+  *qp = cpi->common.quant_params.base_qindex;
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-int brc_av1_get_loop_filter_level(AV1RateControlRTC *rtc) {
-  return 0;
+LibMeboStatus
+brc_av1_get_loop_filter_level(BrcCodecEnginePtr engine_ptr, int *filter_level) {
+  *filter_level = 0;
 #if 0
   AV1_COMP *cpi_ = &rtc->cpi_;
   struct loopfilter *const lf = &cpi_->common.lf;
@@ -78,6 +83,7 @@ int brc_av1_get_loop_filter_level(AV1RateControlRTC *rtc) {
 #endif
   //ToDo:
   //check  loopfilter_frame(cpi, cm);
+   return LIBMEBO_STATUS_SUCCESS;
 }
 
 static inline void update_keyframe_counters(AV1_COMP *cpi) {
@@ -97,7 +103,9 @@ static void adjust_frame_rate(AV1_COMP *cpi/*, int64_t ts_start, int64_t ts_end*
 }
 
 //Code derived from encoder_encode() in av1_cx_iface.c
-void brc_av1_compute_qp (AV1RateControlRTC *rtc, AV1FrameParamsQpRTC *frame_params) {
+LibMeboStatus
+brc_av1_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_params) {
+  AV1RateControlRTC *rtc = (AV1RateControlRTC *) engine_ptr;
   AV1_COMP *cpi = &rtc->cpi_;
   AV1EncoderConfig *oxcf = &cpi->oxcf;
   AV1_COMMON *const cm = &cpi->common;
@@ -210,6 +218,7 @@ void brc_av1_compute_qp (AV1RateControlRTC *rtc, AV1FrameParamsQpRTC *frame_para
   // Fixme: move to post_encode_update() ????
   if (cpi->use_svc)
     av1_save_layer_context(cpi);
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
 static void set_rc_buffer_sizes(AV1_RATE_CONTROL *rc,
@@ -262,6 +271,7 @@ static const int tx_size_2d[TX_SIZES_ALL + 1] = {
   16,  64,   256,  1024, 4096, 32,  32,  128,  128,  512,
   512, 2048, 2048, 64,   64,   256, 256, 1024, 1024,
 };
+
 void av1_qm_init(CommonQuantParams *quant_params, int num_planes) {
   for (int q = 0; q < AV1_NUM_QM_LEVELS; ++q) {
     for (int c = 0; c < num_planes; ++c) {
@@ -294,8 +304,10 @@ static inline int av1_num_planes(const AV1_COMMON *cm) {
   return cm->seq_params.monochrome ? 1 : MAX_MB_PLANE;
 }
 
-void brc_av1_update_rate_control(AV1RateControlRTC *rtc,
-    AV1RateControlRtcConfig *input_rc_cfg) {
+LibMeboStatus
+brc_av1_update_rate_control(BrcCodecEnginePtr engine_ptr,
+    LibMeboRateControllerConfig *input_rc_cfg) {
+  AV1RateControlRTC *rtc = (AV1RateControlRTC *) engine_ptr;
   AV1_COMP *cpi = &rtc->cpi_;
   AV1_COMMON *cm = &cpi->common;
   AV1EncoderConfig *oxcf = &cpi->oxcf;
@@ -433,10 +445,11 @@ void brc_av1_update_rate_control(AV1RateControlRTC *rtc,
         cpi->sf.rt_sf.overshoot_detection_cbr = FAST_DETECTION_MAXQ;
     }
   }
-
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-static void brc_init_rate_control(AV1RateControlRTC *rtc, AV1RateControlRtcConfig *rc_cfg) {
+static void
+brc_init_rate_control(AV1RateControlRTC *rtc, LibMeboRateControllerConfig *rc_cfg) {
   AV1_COMP *cpi = &rtc->cpi_;
   AV1_COMMON *cm = &cpi->common;
   AV1EncoderConfig *oxcf = &cpi->oxcf;
@@ -471,22 +484,12 @@ static void brc_init_rate_control(AV1RateControlRTC *rtc, AV1RateControlRtcConfi
   //av1_loop_filter_init ();//encoder.c
 }
 
-AV1RateControlRTC *
-brc_av1_rate_control_new (AV1RateControlRtcConfig *cfg) {
-  AV1RateControlRTC *rtc = (AV1RateControlRTC*) malloc (sizeof (AV1RateControlRTC));
-  if (!rtc)
-    return NULL;
-  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
-  brc_init_rate_control (rtc, cfg);
-  return rtc;
-}
-
 //Fixme: Use av1/av1_cx_iface.c  aom_codec_err_t validate_config
 //as reference
-AV1RateControlStatus
-brc_av1_validate (AV1RateControlRtcConfig *cfg)
+LibMeboStatus
+brc_av1_validate (LibMeboRateControllerConfig *cfg)
 {
-  AV1RateControlStatus status = STATUS_BRC_AV1_SUCCESS;
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   RANGE_CHECK(cfg, width, 1, 65535);
   RANGE_CHECK(cfg, height, 1, 65535);
@@ -520,8 +523,30 @@ brc_av1_validate (AV1RateControlRtcConfig *cfg)
   return status;
 }
 
+LibMeboStatus
+brc_av1_rate_control_init (LibMeboRateControllerConfig *cfg,
+    BrcCodecEnginePtr *brc_codec_handler) {
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
+  AV1RateControlRTC *rtc = NULL;
+
+  status = brc_av1_validate (cfg);
+  if (status != LIBMEBO_STATUS_SUCCESS)
+    return status;
+
+  rtc = (AV1RateControlRTC*) malloc (sizeof (AV1RateControlRTC));
+  if (!rtc)
+    return LIBMEBO_STATUS_FAILED;
+
+  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
+  brc_init_rate_control (rtc, (BrcCodecEnginePtr)cfg);
+
+  *brc_codec_handler = (BrcCodecEnginePtr)rtc;
+  return LIBMEBO_STATUS_SUCCESS;
+}
+
 void
-brc_av1_rate_control_free (AV1RateControlRTC *rtc) {
+brc_av1_rate_control_free (BrcCodecEnginePtr engine_ptr) {
+  AV1RateControlRTC *rtc = (AV1RateControlRTC *) engine_ptr;	
   if (rtc)
     free(rtc);
 }

@@ -12,6 +12,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <time.h>
+#include <assert.h>
 
 #define MaxSpatialLayers 3
 #define MaxTemporalLayers 3
@@ -528,6 +529,7 @@ start_virtual_encode (LibMeboRateController *rc)
 
    srand(time(NULL));
    for (i = 0; i < frame_count; i++) {
+     LibMeboStatus status;
      int spatial_id;
      int temporal_id;
      int update_rate = 0;
@@ -587,7 +589,8 @@ start_virtual_encode (LibMeboRateController *rc)
       dynamic_bitrates[0] = libmebo_rc_config.target_bandwidth; 
       libmebo_rc_config.target_bandwidth /= 8;
       dynamic_bitrates[1] = libmebo_rc_config.target_bandwidth;
-      libmebo_rate_controller_update_config (rc, &libmebo_rc_config); 
+      status = libmebo_rate_controller_update_config (rc, &libmebo_rc_config); 
+      assert (status == LIBMEBO_STATUS_SUCCESS);
      }
 
      rc_frame_params.frame_type = libmebo_frame_type;
@@ -596,9 +599,12 @@ start_virtual_encode (LibMeboRateController *rc)
      rc_frame_params.spatial_layer_id =  spatial_id;
      rc_frame_params.temporal_layer_id = temporal_id;
 
-     libmebo_rate_controller_compute_qp (rc, rc_frame_params);
+     status = libmebo_rate_controller_compute_qp (rc, rc_frame_params);
+     assert (status == LIBMEBO_STATUS_SUCCESS);
 
-     qp = libmebo_rate_controller_get_qp (libmebo_rc);
+     status  = libmebo_rate_controller_get_qp (libmebo_rc, &qp);
+     assert (status == LIBMEBO_STATUS_SUCCESS);
+
      if (verbose)
        printf ("QP = %d \n", qp);
 
@@ -626,7 +632,8 @@ start_virtual_encode (LibMeboRateController *rc)
      if (verbose)
        printf ("PostEncodeBufferSize = %d \n",buf_size);
 
-     libmebo_rate_controller_update_frame_size (rc, buf_size);
+     status = libmebo_rate_controller_post_encode_update (rc, buf_size);
+     assert (status == LIBMEBO_STATUS_SUCCESS);
 
      // Calculate per layer stream size
      if (enc_params.num_tl > 1 || enc_params.num_sl > 1) {

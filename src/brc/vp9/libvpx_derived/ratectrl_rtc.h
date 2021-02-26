@@ -14,8 +14,10 @@
 #define LIBMEBO_VP9_RATECTRL_RTC_H
 
 #include "vp9_common.h"
+#include "../../../lib/libmebo.h"
 
-typedef struct _VP9RateControlRtcConfig {
+#if 0
+typedef struct _LibMeboRateControllerConfig {
   int width;
   int height;
   // 0-63
@@ -39,8 +41,8 @@ typedef struct _VP9RateControlRtcConfig {
   int scaling_factor_den[VPX_SS_MAX_LAYERS];
   int layer_target_bitrate[VPX_MAX_LAYERS];
   int ts_rate_decimator[VPX_TS_MAX_LAYERS];
-} VP9RateControlRtcConfig;
-
+} LibMeboRateControllerConfig;
+#endif
 typedef struct _VP9FrameParamsQpRTC {
   FRAME_TYPE frame_type;
   int spatial_layer_id;
@@ -52,7 +54,7 @@ typedef struct _VP9FrameParamsQpRTC {
 //
 // #include "vp9/ratectrl_rtc.h"
 // VP9RateControlRTC *rc_api;
-// VP9RateControlRtcConfig cfg;
+// LibMeboRateControllerConfig cfg;
 // VP9FrameParamsQpRTC frame_params;
 //
 // YourFunctionToInitializeConfig(cfg);
@@ -74,22 +76,30 @@ typedef struct _VP9RateControlRTC {
   VP9_COMP cpi_;
 } VP9RateControlRTC;
 
-VP9RateControlRTC * brc_vp9_rate_control_new (VP9RateControlRtcConfig *cfg);
+VP9RateControlRTC * brc_vp9_rate_control_new (LibMeboRateControllerConfig *cfg);
 
-void brc_vp9_rate_control_free (VP9RateControlRTC *rtc);
+void
+brc_vp9_rate_control_free (BrcCodecEnginePtr rtc);
 
-void brc_vp9_update_rate_control(VP9RateControlRTC *rtc_api, VP9RateControlRtcConfig *rc_cfg);
+LibMeboStatus
+brc_vp9_update_rate_control(BrcCodecEnginePtr rtc_api, LibMeboRateControllerConfig *rc_cfg);
 
-void brc_vp9_compute_qp (VP9RateControlRTC *rtc_api, VP9FrameParamsQpRTC *frame_params);
+LibMeboStatus
+brc_vp9_compute_qp (BrcCodecEnginePtr rtc_api, LibMeboRCFrameParams *frame_params);
 
 // GetQP() needs to be called after ComputeQP() to get the latest QP
-int brc_vp9_get_qp(VP9RateControlRTC *rtc_api);
+LibMeboStatus
+brc_vp9_get_qp(BrcCodecEnginePtr rtc_api, int *qp);
 
-int brc_vp9_get_loop_filter_level(VP9RateControlRTC *rtc_api);
+LibMeboStatus
+brc_vp9_get_loop_filter_level(BrcCodecEnginePtr rtc_api, int *lf);
 
 // Feedback to rate control with the size of current encoded frame
-void brc_vp9_post_encode_update(VP9RateControlRTC *rtc_api, uint64_t encoded_frame_size);
+LibMeboStatus
+brc_vp9_post_encode_update(BrcCodecEnginePtr rtc_api, uint64_t encoded_frame_size);
 
-VP9RateControlStatus brc_vp9_validate (VP9RateControlRtcConfig *cfg);
+LibMeboStatus
+brc_vp9_rate_control_init (LibMeboRateControllerConfig *rc_cfg,
+    BrcCodecEnginePtr *brc_codec_handler);
 
 #endif  // LIBMEBO_VP9_RATECTRL_H

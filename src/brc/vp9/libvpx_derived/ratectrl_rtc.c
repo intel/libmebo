@@ -42,8 +42,9 @@
 
 /*===== BRC functions exposed to libs implementation ========= */
 
-
-void brc_vp9_post_encode_update(VP9RateControlRTC *rtc,uint64_t encoded_frame_size) {
+LibMeboStatus
+brc_vp9_post_encode_update(BrcCodecEnginePtr engine_ptr, uint64_t encoded_frame_size) {
+  VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   VP9_COMP *cpi_ = &rtc->cpi_;
   vp9_rc_postencode_update(cpi_, encoded_frame_size);
 
@@ -52,23 +53,31 @@ void brc_vp9_post_encode_update(VP9RateControlRTC *rtc,uint64_t encoded_frame_si
     vp9_save_layer_context(cpi_);
 
   cpi_->common.current_video_frame++;
+
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-
-int brc_vp9_get_qp(VP9RateControlRTC *rtc) {
+LibMeboStatus
+brc_vp9_get_qp(BrcCodecEnginePtr engine_ptr, int *qp) {
+  VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;	
   VP9_COMP *cpi_ = &rtc->cpi_;
-  return cpi_->common.base_qindex;
+  *qp = cpi_->common.base_qindex;
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-int brc_vp9_get_loop_filter_level(VP9RateControlRTC *rtc) {
-
+LibMeboStatus
+brc_vp9_get_loop_filter_level(BrcCodecEnginePtr engine_ptr, int *filter_level) {
+  VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   VP9_COMP *cpi_ = &rtc->cpi_;
   struct loopfilter *const lf = &cpi_->common.lf;
   vp9_pick_filter_level(cpi_, LPF_PICK_FROM_Q);
-  return lf->filter_level;
+  *filter_level = lf->filter_level;
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-void brc_vp9_compute_qp (VP9RateControlRTC *rtc, VP9FrameParamsQpRTC *frame_params) {
+LibMeboStatus
+brc_vp9_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_params) {
+  VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   VP9_COMP *cpi_ = &rtc->cpi_;
   VP9_COMMON *const cm = &cpi_->common;
   int width, height;
@@ -115,9 +124,12 @@ void brc_vp9_compute_qp (VP9RateControlRTC *rtc, VP9FrameParamsQpRTC *frame_para
   int bottom_index, top_index;
   cpi_->common.base_qindex =
       vp9_rc_pick_q_and_bounds(cpi_, &bottom_index, &top_index);
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig *rc_cfg) {
+LibMeboStatus
+brc_vp9_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerConfig *rc_cfg) {
+  VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   VP9_COMP *cpi_ = &rtc->cpi_;
   VP9_COMMON *cm = &cpi_->common;
   VP9EncoderConfig *oxcf = &cpi_->oxcf;
@@ -188,9 +200,11 @@ void brc_vp9_update_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig
   }
 
   vp9_check_reset_rc_flag(cpi_);
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-void brc_init_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig *rc_cfg) {
+static void
+brc_init_rate_control(VP9RateControlRTC *rtc, LibMeboRateControllerConfig *rc_cfg) {
   VP9_COMP *cpi_ = &rtc->cpi_;
   VP9_COMMON *cm = &cpi_->common;
   VP9EncoderConfig *oxcf = &cpi_->oxcf;
@@ -214,7 +228,7 @@ void brc_init_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig *rc_c
 
   cpi_->target_level = oxcf->target_level;
 
-  brc_vp9_update_rate_control(rtc, rc_cfg);
+  brc_vp9_update_rate_control((BrcCodecEnginePtr)rtc, rc_cfg);
 
   cpi_->use_svc = (cpi_->svc.number_spatial_layers > 1 ||
                    cpi_->svc.number_temporal_layers > 1)
@@ -230,20 +244,10 @@ void brc_init_rate_control(VP9RateControlRTC *rtc, VP9RateControlRtcConfig *rc_c
   cm->current_video_frame = 0;
 }
 
-VP9RateControlRTC *
-brc_vp9_rate_control_new (VP9RateControlRtcConfig *cfg) {
-  VP9RateControlRTC *rtc = (VP9RateControlRTC*) malloc (sizeof (VP9RateControlRTC));
-  if (!rtc)
-    return NULL;
-  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
-  brc_init_rate_control (rtc, cfg);
-  return rtc;
-}
-
-VP9RateControlStatus
-brc_vp9_validate (VP9RateControlRtcConfig *cfg)
+LibMeboStatus
+brc_vp9_validate (LibMeboRateControllerConfig *cfg)
 {
-  VP9RateControlStatus status = STATUS_BRC_VP9_SUCCESS;
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   RANGE_CHECK(cfg, width, 1, 65535);
   RANGE_CHECK(cfg, height, 1, 65535);
@@ -277,8 +281,31 @@ brc_vp9_validate (VP9RateControlRtcConfig *cfg)
   return status;
 }
 
+
+LibMeboStatus
+brc_vp9_rate_control_init (LibMeboRateControllerConfig *cfg,
+    BrcCodecEnginePtr *brc_codec_handler) {
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
+  VP9RateControlRTC *rtc = NULL;
+
+  status = brc_vp9_validate (cfg);
+  if (status != LIBMEBO_STATUS_SUCCESS)
+    return status;
+
+  rtc = (VP9RateControlRTC*) malloc (sizeof (VP9RateControlRTC));
+  if (!rtc)
+    return LIBMEBO_STATUS_FAILED;
+
+  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
+  brc_init_rate_control (rtc, (BrcCodecEnginePtr)cfg);
+
+  *brc_codec_handler = (BrcCodecEnginePtr)rtc;
+  return LIBMEBO_STATUS_SUCCESS;
+}
+
 void
-brc_vp9_rate_control_free (VP9RateControlRTC *rtc) {
+brc_vp9_rate_control_free (BrcCodecEnginePtr engine_ptr) {
+  VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   if (rtc)
     free(rtc);
 }

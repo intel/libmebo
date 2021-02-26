@@ -81,24 +81,33 @@ int vp8_reverse_trans(int x) {
   return 63;
 }
 
-void brc_vp8_post_encode_update(VP8RateControlRTC *rtc,uint64_t encoded_frame_size) {
-
+LibMeboStatus
+brc_vp8_post_encode_update(BrcCodecEnginePtr engine_ptr, uint64_t encoded_frame_size) {
+  VP8RateControlRTC *rtc = (VP8RateControlRTC *) engine_ptr;
   VP8_COMP *cpi_ = &rtc->cpi_;
   vp8_rc_postencode_update(cpi_, encoded_frame_size);
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-int brc_vp8_get_qp(VP8RateControlRTC *rtc) {
+LibMeboStatus
+brc_vp8_get_qp(BrcCodecEnginePtr engine_ptr, int *qp) {
+  VP8RateControlRTC *rtc = (VP8RateControlRTC *) engine_ptr;
   VP8_COMP *cpi_ = &rtc->cpi_;
-
-  return cpi_->common.base_qindex;
+  *qp = cpi_->common.base_qindex;
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-int brc_vp8_get_loop_filter_level(VP8RateControlRTC *rtc) {
+LibMeboStatus
+brc_vp8_get_loop_filter_level(BrcCodecEnginePtr engine_ptr, int *filter_level) {
   fprintf(stderr, "%s \n", "Warning: Not supported");
-  return 0;
+  *filter_level = 0;
+  //Fixme: return error
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-void brc_vp8_compute_qp (VP8RateControlRTC *rtc, VP8FrameParamsQpRTC *frame_params) {
+LibMeboStatus
+brc_vp8_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_params) {
+  VP8RateControlRTC *rtc = (VP8RateControlRTC *) engine_ptr;
   VP8_COMP *cpi_ = &rtc->cpi_;
   VP8_COMMON *const cm = &cpi_->common;
   int Q;
@@ -213,7 +222,7 @@ void brc_vp8_compute_qp (VP8RateControlRTC *rtc, VP8FrameParamsQpRTC *frame_para
 
   if (cpi_->pass == 0) {
       if (vp8_drop_encodedframe_overshoot(cpi_, Q))
-        return;
+        return LIBMEBO_STATUS_SUCCESS;
   }
 
   if (frame_over_shoot_limit == 0)
@@ -236,6 +245,7 @@ void brc_vp8_compute_qp (VP8RateControlRTC *rtc, VP8FrameParamsQpRTC *frame_para
         over_size_percent = (int)(over_size_percent * 0.96);
       }
   }
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
 static int rescale(int val, int num, int denom) {
@@ -246,7 +256,9 @@ static int rescale(int val, int num, int denom) {
   return (int)(llval * llnum / llden);
 }
 
-void brc_vp8_update_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig *rc_cfg) {
+LibMeboStatus
+brc_vp8_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerConfig *rc_cfg) {
+  VP8RateControlRTC *rtc = (VP8RateControlRTC *) engine_ptr;
   VP8_COMP *cpi_ = &rtc->cpi_;
   VP8_COMMON *cm = &cpi_->common;
   VP8_CONFIG *oxcf = &cpi_->oxcf;
@@ -412,9 +424,11 @@ void brc_vp8_update_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig
   for (int i = 0; i < KEY_FRAME_CONTEXT; ++i) {
     cpi_->prior_key_frame_distance[i] = (int)cpi_->output_framerate;
   }
+  return LIBMEBO_STATUS_SUCCESS;
 }
 
-void brc_vp8_init_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig *rc_cfg) {
+static void
+brc_init_rate_control(VP8RateControlRTC *rtc, LibMeboRateControllerConfig *rc_cfg) {
   VP8_COMP *cpi_ = &rtc->cpi_;
   VP8_CONFIG *oxcf = &cpi_->oxcf;
 
@@ -423,23 +437,13 @@ void brc_vp8_init_rate_control(VP8RateControlRTC *rtc, VP8RateControlRtcConfig *
   oxcf->cq_level = 10;//Fixme?
   oxcf->number_of_layers = 1;
 
-  brc_vp8_update_rate_control(rtc, rc_cfg);
+  brc_vp8_update_rate_control((BrcCodecEnginePtr)rtc, rc_cfg);
 }
 
-VP8RateControlRTC *
-brc_vp8_rate_control_new (VP8RateControlRtcConfig *cfg) {
-  VP8RateControlRTC *rtc = (VP8RateControlRTC*) malloc (sizeof (VP8RateControlRTC));
-  if (!rtc)
-    return NULL;
-  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
-  brc_vp8_init_rate_control (rtc, cfg);
-  return rtc;
-}
-
-VP8RateControlStatus
-brc_vp8_validate (VP8RateControlRtcConfig *cfg)
+LibMeboStatus
+brc_vp8_validate (LibMeboRateControllerConfig *cfg)
 {
-  VP8RateControlStatus status = STATUS_BRC_VP8_SUCCESS;
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   RANGE_CHECK(cfg, width, 1, 16383);
   RANGE_CHECK(cfg, height, 1, 16383);
@@ -473,8 +477,30 @@ brc_vp8_validate (VP8RateControlRtcConfig *cfg)
   return status;
 }
 
+LibMeboStatus
+brc_vp8_rate_control_init (LibMeboRateControllerConfig *cfg,
+    BrcCodecEnginePtr *brc_codec_handler) {
+  LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
+  VP8RateControlRTC *rtc = NULL;
+
+  status = brc_vp8_validate (cfg);
+  if (status != LIBMEBO_STATUS_SUCCESS)
+    return status;
+
+  rtc = (VP8RateControlRTC*) malloc (sizeof (VP8RateControlRTC));
+  if (!rtc)
+    return LIBMEBO_STATUS_FAILED;
+
+  memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
+  brc_init_rate_control (rtc, cfg);
+
+  *brc_codec_handler = (BrcCodecEnginePtr)rtc;
+  return LIBMEBO_STATUS_SUCCESS;
+}
+
 void
-brc_vp8_rate_control_free (VP8RateControlRTC *rtc) {
+brc_vp8_rate_control_free (BrcCodecEnginePtr engine_ptr) {
+  VP8RateControlRTC *rtc = (VP8RateControlRTC *) engine_ptr;
   if (rtc)
     free(rtc);
 }
