@@ -60,6 +60,99 @@ typedef struct {
   BrcCodecEnginePtr brc_codec_handler;
 } LibMeboRateControllerPrivate;
 
+typedef struct _brc_algo_map {
+  LibMeboCodecType  codec_type;
+  LibMeboBrcAlgorithmID algo_id;
+  const char *description;
+  LibMeboCodecInterface algo_interface;
+} brc_algo_map;
+
+static const brc_algo_map algo_impl_map[] = {
+  {
+    LIBMEBO_CODEC_VP8,
+    LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8,
+    "VP8 BRC algorithm derived from libvpx",
+    {
+      brc_vp8_rate_control_init,
+      brc_vp8_update_rate_control,
+      brc_vp8_compute_qp,
+      brc_vp8_get_qp,
+      brc_vp8_get_loop_filter_level,
+      brc_vp8_post_encode_update,
+      brc_vp8_rate_control_free,
+    },
+  },
+  {
+    LIBMEBO_CODEC_VP9,
+    LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9,
+    "VP9 BRC algorithm derivded from libvpx",
+    {
+      brc_vp9_rate_control_init,
+      brc_vp9_update_rate_control,
+      brc_vp9_compute_qp,
+      brc_vp9_get_qp,
+      brc_vp9_get_loop_filter_level,
+      brc_vp9_post_encode_update,
+      brc_vp9_rate_control_free,
+    },
+  },
+  {
+    LIBMEBO_CODEC_AV1,
+    LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1,
+    "AV1 BRC algorithm dervied from AOM",
+    {
+      brc_av1_rate_control_init,
+      brc_av1_update_rate_control,
+      brc_av1_compute_qp,
+      brc_av1_get_qp,
+      brc_av1_get_loop_filter_level,
+      brc_av1_post_encode_update,
+      brc_av1_rate_control_free,
+    },
+  },
+  {
+    LIBMEBO_CODEC_UNKNOWN,
+    LIBMEBO_BRC_ALGORITHM_UNKNOWN,
+    "Unknown"
+  },
+};
+
+LibMeboBrcAlgorithmID
+get_default_algorithm_id (LibMeboCodecType codec_type)
+{
+  switch (codec_type) {
+    case LIBMEBO_CODEC_VP8:
+      return LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8;
+    case LIBMEBO_CODEC_VP9:
+      return LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9;
+    case LIBMEBO_CODEC_AV1:
+      return LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1;
+    case LIBMEBO_CODEC_UNKNOWN:
+      return LIBMEBO_BRC_ALGORITHM_UNKNOWN;
+    default:
+      return LIBMEBO_BRC_ALGORITHM_UNKNOWN;
+  }
+  return LIBMEBO_BRC_ALGORITHM_UNKNOWN;
+}
+
+const brc_algo_map *
+get_backend_impl (LibMeboCodecType codec_type,
+    LibMeboBrcAlgorithmID algo_id)
+{
+  const brc_algo_map *bm = NULL;
+
+  //Chose the default option
+  if (algo_id == LIBMEBO_BRC_ALGORITHM_DEFAULT) {
+    algo_id = get_default_algorithm_id (codec_type);
+  }
+
+  for (bm = algo_impl_map; bm->codec_type != LIBMEBO_CODEC_UNKNOWN; bm++){
+    if (bm->algo_id == algo_id)
+      return bm;
+  }
+  return NULL;
+}
+
 /********************** API *************************/
 
 /**
@@ -262,6 +355,7 @@ libmebo_rate_controller_free (LibMeboRateController *rc)
   rc = NULL;
 }
 
+
 /**
  * \brief libmebo_rate_controller_new:
  *
@@ -274,14 +368,14 @@ libmebo_rate_controller_free (LibMeboRateController *rc)
  * \return Retrun the newly created LibMeboRateController instance 
  */
 LibMeboRateController *
-libmebo_rate_controller_new (LibMeboCodecType codec_type) {
+libmebo_rate_controller_new (LibMeboCodecType codec_type,
+    LibMeboBrcAlgorithmID algo_id) {
   LibMeboRateController *rc;
   LibMeboRateControllerPrivate *priv;
 
-  if (codec_type != LIBMEBO_CODEC_VP9 &&
-      codec_type != LIBMEBO_CODEC_VP8 &&
-      codec_type != LIBMEBO_CODEC_AV1) {
-    fprintf (stderr, "Error: Unsupported Codec \n");
+  const brc_algo_map *brc_backend = get_backend_impl (codec_type, algo_id);
+  if (brc_backend == NULL) {
+    fprintf (stderr, "Error: Unsupported Codec/Algorithm \n");
     return NULL;
   }
 
@@ -298,38 +392,7 @@ libmebo_rate_controller_new (LibMeboCodecType codec_type) {
       free(rc);
     return NULL;
   }
-
-  switch (codec_type) {
-    case LIBMEBO_CODEC_VP8:
-      priv->brc_interface.init = brc_vp8_rate_control_init; 
-      priv->brc_interface.update_config = brc_vp8_update_rate_control;
-      priv->brc_interface.compute_qp = brc_vp8_compute_qp; 
-      priv->brc_interface.get_qp = brc_vp8_get_qp; 
-      priv->brc_interface.get_loop_filter = brc_vp8_get_loop_filter_level; 
-      priv->brc_interface.post_encode_update = brc_vp8_post_encode_update; 
-      priv->brc_interface.free = brc_vp8_rate_control_free; 
-      break;
-    case LIBMEBO_CODEC_VP9:
-      priv->brc_interface.init = brc_vp9_rate_control_init; 
-      priv->brc_interface.update_config = brc_vp9_update_rate_control;
-      priv->brc_interface.compute_qp = brc_vp9_compute_qp; 
-      priv->brc_interface.get_qp = brc_vp9_get_qp; 
-      priv->brc_interface.get_loop_filter = brc_vp9_get_loop_filter_level; 
-      priv->brc_interface.post_encode_update = brc_vp9_post_encode_update; 
-      priv->brc_interface.free = brc_vp9_rate_control_free; 
-      break;
-    case LIBMEBO_CODEC_AV1:
-      priv->brc_interface.init = brc_av1_rate_control_init; 
-      priv->brc_interface.update_config = brc_av1_update_rate_control;
-      priv->brc_interface.compute_qp = brc_av1_compute_qp; 
-      priv->brc_interface.get_qp = brc_av1_get_qp; 
-      priv->brc_interface.get_loop_filter = brc_av1_get_loop_filter_level; 
-      priv->brc_interface.post_encode_update = brc_av1_post_encode_update; 
-      priv->brc_interface.free = brc_av1_rate_control_free; 
-      break;
-    default:
-      break;
-  }
+  priv->brc_interface = brc_backend->algo_interface;
 
   rc->priv = priv;
   rc->codec_type = codec_type;

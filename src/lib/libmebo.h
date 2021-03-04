@@ -65,7 +65,7 @@ Overview
  * __InitializeConfig(rc_cfg);
  *
  * //Create an instance of libmebo
- * rc = libmebo_rate_controller_new (LIBMEBO_CODEC_VP9);
+ * rc = libmebo_rate_controller_new (LIBMEBO_CODEC_VP9, LIBMEBO_BRC_ALGORITHM_DEFAULT);
  *
  * //Initialize the libmebo instance with the rc_config
  * status = libmebo_rate_controller_init (rc, &rc_config);
@@ -108,7 +108,29 @@ Overview
 typedef void* BrcCodecEnginePtr;
 
 /** 
- * Return status type of libmebo APIs
+ * Codec Types
+ */
+typedef enum {
+  LIBMEBO_CODEC_VP8,
+  LIBMEBO_CODEC_VP9,
+  LIBMEBO_CODEC_AV1,
+  LIBMEBO_CODEC_UNKNOWN,
+} LibMeboCodecType;
+
+/**
+ * Backend algorithm IDs
+ */
+typedef enum
+{
+  LIBMEBO_BRC_ALGORITHM_DEFAULT,
+  LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8,
+  LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9,
+  LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1,
+  LIBMEBO_BRC_ALGORITHM_UNKNOWN,
+} LibMeboBrcAlgorithmID;
+
+/**
+LIBMEBO_CODEC_VP8, * Return status type of libmebo APIs
  */
 typedef enum {
   LIBMEBO_STATUS_SUCCESS,
@@ -121,14 +143,6 @@ typedef enum {
   LIBMEBO_STATUS_UNKNOWN,
 } LibMeboStatus;
 
-/** 
- * Codec Types
- */
-typedef enum {  
-  LIBMEBO_CODEC_VP8,
-  LIBMEBO_CODEC_VP9,
-  LIBMEBO_CODEC_AV1,
-} LibMeboCodecType;
 
 /** 
  * Rate Control Modes
@@ -354,12 +368,14 @@ typedef struct _LibMeboRateController {
  * libmebo_rate_controller_free after use.
  *
  * \param[in]  codec_type  LibMeboCodecType of the codec
+ * \param[in]  algo_id     LibMeboBrcAlgorithmID of the backend implementation
  *
  * \returns  Returns a pointer to LibMeboRateController, or NULL
  *           if fails to create the controller instance.
  */
 LibMeboRateController *
-libmebo_rate_controller_new (LibMeboCodecType codec_type);
+libmebo_rate_controller_new (LibMeboCodecType codec_type,
+                             LibMeboBrcAlgorithmID algo_id);
 
 /**
  * \brief libmebo_rate_controller_init:

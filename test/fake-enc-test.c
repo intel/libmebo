@@ -673,8 +673,32 @@ ValidateInput ()
   }
 }
 
+void
+get_codec_and_algo_id (CodecID id, int *codec_id, int *algo_id)
+{
+  switch (id)
+  {
+    case VP8_ID:
+      *codec_id = LIBMEBO_CODEC_VP8;
+      *algo_id = LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8;
+      break;
+    case VP9_ID:
+      *codec_id = LIBMEBO_CODEC_VP9;
+      *algo_id = LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9;
+      break;
+    case AV1_ID:
+      *codec_id = LIBMEBO_CODEC_VP8;
+      *algo_id = LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1;
+      break;
+    default:
+      *codec_id = LIBMEBO_CODEC_UNKNOWN;
+      *algo_id = LIBMEBO_BRC_ALGORITHM_UNKNOWN;
+  }
+}
+
 int main (int argc,char **argv)
 {
+  int codec_type, algo_id;
   if (argc < 3) {
     show_help();
     return -1;
@@ -687,7 +711,9 @@ int main (int argc,char **argv)
   InitLayeredBitrateAlloc (enc_params.num_sl, enc_params.num_tl,enc_params.bitrate);
 
   //Create the rate-controller
-  libmebo_rc = libmebo_rate_controller_new (enc_params.id);
+  get_codec_and_algo_id (enc_params.id, &codec_type, &algo_id);
+
+  libmebo_rc = libmebo_rate_controller_new (codec_type, algo_id);
   if (!libmebo_rc) {
     printf ("Failed to create the rate-controller \n");
     return -1;
