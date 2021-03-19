@@ -42,18 +42,10 @@
  * hardware encoders across the frameworks and operatings systems
  * to use custom bitrate control alogorithms for specific
  * use cases.
- */
-
-/**
- * \defgroup api_core LibMebo API
  *
- * @{
- */
-
-/**
-Overview
- * How to use the libmebo apis in the encoder implementation:
+ * \section api_howto How to use the libmebo apis with an encoder
  *
+ * \code
  * #include <libmebo/libmebo.h>
  *
  * LibMeboRateController *rc;
@@ -78,31 +70,31 @@ Overview
  *     assert (status == LIBMEBO_STATUS_SUCCESS);
  *   }
  *
- *  //Initialize the per-frame parameters (frame_type & layer ids)
- *  __InitializeRCFrameParams (rc_frame_param);
+ *   //Initialize the per-frame parameters (frame_type & layer ids)
+ *   __InitializeRCFrameParams (rc_frame_param);
  *
- *  //Compute the QP
- *  status = libmebo_rate_controller_compute_qp (rc, rc_frame_param);
- *  assert (status == LIBMEBO_STATUS_SUCCESS);
+ *   //Compute the QP
+ *   status = libmebo_rate_controller_compute_qp (rc, rc_frame_param);
+ *   assert (status == LIBMEBO_STATUS_SUCCESS);
  *
- *  //Retrieve the QP for the next frame to be encoded
- *  status = libmebo_rate_controller_get_qp (rc, &qp);
- *  assert (status == LIBMEBO_STATUS_SUCCESS);
+ *   //Retrieve the QP for the next frame to be encoded
+ *   status = libmebo_rate_controller_get_qp (rc, &qp);
+ *   assert (status == LIBMEBO_STATUS_SUCCESS);
  *
- *  // Optional:libmebo can also recommend the loop-filter strength
- *  status = libmebo_rate_contoller_get_loop_filter_level (rc, &lf);
+ *   // Optional:libmebo can also recommend the loop-filter strength
+ *   status = libmebo_rate_contoller_get_loop_filter_level (rc, &lf);
  * 
- * // Ensure the status == LIBMEBO_STATUS_SUCCESS before using
- * // the loop filter level since some algos are not supporting this API
+ *   // Ensure the status == LIBMEBO_STATUS_SUCCESS before using
+ *   // the loop filter level since some algos are not supporting this API
  *
- *  //Encoder implementation that running in CQP mode
- *  __EncodeBitStream(qp, [lf])
+ *   //Encoder implementation that running in CQP mode
+ *   __EncodeBitStream(qp, [lf])
  *
- *  //Update libmebo instance with encoded frame size
- *  status = libmebo_rate_controller_post_encode_update (rc, EncFrameSize);
- *  assert (status == LIBMEBO_STATUS_SUCCESS);
+ *   //Update libmebo instance with encoded frame size
+ *   status = libmebo_rate_controller_post_encode_update (rc, EncFrameSize);
+ *   assert (status == LIBMEBO_STATUS_SUCCESS);
  * }
- *
+ * \endcode
 */
 
 typedef void* BrcCodecEnginePtr;
@@ -474,5 +466,4 @@ libmebo_rate_controller_get_qp(LibMeboRateController *rc, int *qp);
 LibMeboStatus
 libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc, int *lf);
 
-/**@}*/
 #endif
