@@ -167,16 +167,18 @@ typedef struct _LibMeboRCFrameParams {
 } LibMeboRCFrameParams;
 
 /* Temporal Scalability: Maximum number of coding layers */
-#define LIBMEBO_TS_MAX_LAYERS 5
+#define LIBMEBO_TS_MAX_LAYERS 8
 
 /* Spatial Scalability: Maximum number of Spatial coding layers */
-#define LIBMEBO_SS_MAX_LAYERS 5
+#define LIBMEBO_SS_MAX_LAYERS 4
 
 /** 
  * Temporal + Spatial Scalability: Maximum number of coding layers
- * 3 temporal + 4 spatial layers are allowed.
+ * Not all codecs are supporting the LIBMEBO_MAX_LAYERS. The
+ * libmebo_rate_controller_init() will perform the codec specific
+ * layer number validation.
  */
-#define LIBMEBO_MAX_LAYERS 12
+#define LIBMEBO_MAX_LAYERS 32
 
 /** 
  * \biref LibMebo Rate Controller configuration structure

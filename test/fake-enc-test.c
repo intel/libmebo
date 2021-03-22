@@ -237,15 +237,6 @@ parse_args(int argc, char **argv)
       case 3:
         enc_params.framecount = atoi(optarg);
 	break;
-      case 4:
-        enc_params.num_tl = atoi(optarg);
-	break;
-      case 5:
-        enc_params.num_sl = atoi(optarg);
-	break;
-      case 6:
-        enc_params.dynamic_rate_change = atoi(optarg);
-	break;
       case 7:
         verbose = atoi(optarg);
 	break;
@@ -284,6 +275,10 @@ InitLayeredBitrateAlloc (int num_sl,
     int num_tl, int bitrate)
 {
   int sl, tl;
+
+  assert (num_sl && num_sl <= MaxSpatialLayers);
+  assert (num_tl && num_tl <= MaxTemporalLayers);
+
   for (sl=0; sl<num_sl; sl++) {
     int sl_rate = bitrate/num_sl;
     for (tl=0; tl<num_tl; tl++) {
@@ -512,9 +507,9 @@ start_virtual_encode (LibMeboRateController *rc)
    LibMeboFrameType libmebo_frame_type;
    LibMeboRCFrameParams rc_frame_params;
    unsigned int preset = enc_params.preset;
-   unsigned int svc_preset;
-   unsigned int frame_count;
-   unsigned int prev_is_key;
+   unsigned int svc_preset = 0;
+   unsigned int frame_count = 0;
+   unsigned int prev_is_key = 0;
 
    if (verbose)
      printf ("=======Fake Encode starts ==============\n");
@@ -708,7 +703,7 @@ int main (int argc,char **argv)
   ValidateInput ();
 
   //Init layered bitrate allocation estimation
-  InitLayeredBitrateAlloc (enc_params.num_sl, enc_params.num_tl,enc_params.bitrate);
+  InitLayeredBitrateAlloc (enc_params.num_sl, enc_params.num_tl, enc_params.bitrate);
 
   //Create the rate-controller
   get_codec_and_algo_id (enc_params.id, &codec_type, &algo_id);
@@ -727,4 +722,6 @@ int main (int argc,char **argv)
   start_virtual_encode (libmebo_rc);
 
   libmebo_rate_controller_free (libmebo_rc);
+
+  return 0;
 }

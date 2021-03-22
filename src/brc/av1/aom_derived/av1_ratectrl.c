@@ -1059,10 +1059,8 @@ int av1_rc_pick_q_and_bounds(const AV1_COMP *cpi, AV1_RATE_CONTROL *rc, int widt
                              int height, /* int gf_index,*/ int *bottom_index,
                              int *top_index) {
   int q;
-  if (cpi->oxcf.rc_cfg.mode == AOM_CBR) {
-      q = rc_pick_q_and_bounds_no_stats_cbr(cpi, width, height, bottom_index,
+  q = rc_pick_q_and_bounds_no_stats_cbr(cpi, width, height, bottom_index,
                                             top_index);
-  }
   //ToDo
   //Add look ahead processing support
   return q;
@@ -1486,14 +1484,13 @@ void av1_get_one_pass_rt_params(AV1_COMP *cpi,
   //set_gf_interval_update_onepass_rt(cpi, frame_params->frame_type);
 
   // Set target size.
-  if (cpi->oxcf.rc_cfg.mode == AOM_CBR) {
-    if (frame_type == AV1_KEY_FRAME) {
-      target = av1_calc_iframe_target_size_one_pass_cbr(cpi);
-    } else {
-      target = av1_calc_pframe_target_size_one_pass_cbr(
-          cpi, gf_group->update_type[gf_group->index]);
-    }
+  if (frame_type == AV1_KEY_FRAME) {
+    target = av1_calc_iframe_target_size_one_pass_cbr(cpi);
+  } else {
+    target = av1_calc_pframe_target_size_one_pass_cbr(
+        cpi, gf_group->update_type[gf_group->index]);
   }
+
   av1_rc_set_frame_target(cpi, target, cm->width, cm->height);
   rc->base_frame_target = target;
   cm->current_frame.frame_type = frame_type;
