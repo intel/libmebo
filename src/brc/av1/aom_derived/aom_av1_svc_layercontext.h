@@ -12,7 +12,7 @@
 #ifndef AOM_AV1_ENCODER_SVC_LAYERCONTEXT_H_
 #define AOM_AV1_ENCODER_SVC_LAYERCONTEXT_H_
 
-#include "av1_ratectrl.h"
+#include "aom_av1_ratectrl.h"
 
 /*!
  * \brief The stucture of quantities related to each spatial and temporal layer.

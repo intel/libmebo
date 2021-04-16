@@ -10,9 +10,9 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "vp9_ratectrl.h"
-#include "vp9_svc_layercontext.h"
-#include "vp9_common.h"
+#include "libvpx_vp9_ratectrl.h"
+#include "libvpx_vp9_svc_layercontext.h"
+#include "libvpx_vp9_common.h"
 
 #define ASSIGN_MINQ_TABLE(bit_depth, name)       \
   do {                                           \
@@ -27,7 +27,7 @@
   } while (0)
 
 /* clang-format off */
-const Vp9LevelSpec vp9_level_defs[VP9_LEVELS] = {
+static const Vp9LevelSpec vp9_level_defs[VP9_LEVELS] = {
   //         sample rate    size   breadth  bitrate  cpb
   { LEVEL_1,   829440,      36864,    512,   200,    400,    2, 1,  4,  8 },
   { LEVEL_1_1, 2764800,     73728,    768,   800,    1000,   2, 1,  4,  8 },
@@ -45,111 +45,6 @@ const Vp9LevelSpec vp9_level_defs[VP9_LEVELS] = {
   { LEVEL_6,   1176502272,  35651584, 16832, 180000, 90000,  8, 16, 10, 4 },
   { LEVEL_6_1, 2353004544u, 35651584, 16832, 240000, 180000, 8, 16, 10, 4 },
   { LEVEL_6_2, 4706009088u, 35651584, 16832, 480000, 360000, 8, 16, 10, 4 },
-};
-
-static const int16_t dc_qlookup[QINDEX_RANGE] = {
-  4, 8, 8, 9, 10, 11, 12, 12,
-  13, 14, 15, 16, 17, 18, 19, 19,
-  20, 21, 22, 23, 24, 25, 26, 26,
-  27, 28, 29, 30, 31, 32, 32, 33,
-  34, 35, 36, 37, 38, 38, 39, 40,
-  41, 42, 43, 43, 44, 45, 46, 47,
-  48, 48, 49, 50, 51, 52, 53, 53,
-  54, 55, 56, 57, 57, 58, 59, 60,
-  61, 62, 62, 63, 64, 65, 66, 66,
-  67, 68, 69, 70, 70, 71, 72, 73,
-  74, 74, 75, 76, 77, 78, 78, 79,
-  80, 81, 81, 82, 83, 84, 85, 85,
-  87, 88, 90, 92, 93, 95, 96, 98,
-  99, 101, 102, 104, 105, 107, 108, 110,
-  111, 113, 114, 116, 117, 118, 120, 121,
-  123, 125, 127, 129, 131, 134, 136, 138,
-  140, 142, 144, 146, 148, 150, 152, 154,
-  156, 158, 161, 164, 166, 169, 172, 174,
-  177, 180, 182, 185, 187, 190, 192, 195,
-  199, 202, 205, 208, 211, 214, 217, 220,
-  223, 226, 230, 233, 237, 240, 243, 247,
-  250, 253, 257, 261, 265, 269, 272, 276,
-  280, 284, 288, 292, 296, 300, 304, 309,
-  313, 317, 322, 326, 330, 335, 340, 344,
-  349, 354, 359, 364, 369, 374, 379, 384,
-  389, 395, 400, 406, 411, 417, 423, 429,
-  435, 441, 447, 454, 461, 467, 475, 482,
-  489, 497, 505, 513, 522, 530, 539, 549,
-  559, 569, 579, 590, 602, 614, 626, 640,
-  654, 668, 684, 700, 717, 736, 755, 775,
-  796, 819, 843, 869, 896, 925, 955, 988,
-  1022, 1058, 1098, 1139, 1184, 1232, 1282, 1336,
-};
-
-static const int16_t dc_qlookup_10[QINDEX_RANGE] = {
-  4, 9, 10, 13, 15, 17, 20, 22,
-  25, 28, 31, 34, 37, 40, 43, 47,
-  50, 53, 57, 60, 64, 68, 71, 75,
-  78, 82, 86, 90, 93, 97, 101, 105,
-  109, 113, 116, 120, 124, 128, 132, 136,
-  140, 143, 147, 151, 155, 159, 163, 166,
-  170, 174, 178, 182, 185, 189, 193, 197,
-  200, 204, 208, 212, 215, 219, 223, 226,
-  230, 233, 237, 241, 244, 248, 251, 255,
-  259, 262, 266, 269, 273, 276, 280, 283,
-  287, 290, 293, 297, 300, 304, 307, 310,
-  314, 317, 321, 324, 327, 331, 334, 337,
-  343, 350, 356, 362, 369, 375, 381, 387,
-  394, 400, 406, 412, 418, 424, 430, 436,
-  442, 448, 454, 460, 466, 472, 478, 484,
-  490, 499, 507, 516, 525, 533, 542, 550,
-  559, 567, 576, 584, 592, 601, 609, 617,
-  625, 634, 644, 655, 666, 676, 687, 698,
-  708, 718, 729, 739, 749, 759, 770, 782,
-  795, 807, 819, 831, 844, 856, 868, 880,
-  891, 906, 920, 933, 947, 961, 975, 988,
-  1001, 1015, 1030, 1045, 1061, 1076, 1090, 1105,
-  1120, 1137, 1153, 1170, 1186, 1202, 1218, 1236,
-  1253, 1271, 1288, 1306, 1323, 1342, 1361, 1379,
-  1398, 1416, 1436, 1456, 1476, 1496, 1516, 1537,
-  1559, 1580, 1601, 1624, 1647, 1670, 1692, 1717,
-  1741, 1766, 1791, 1817, 1844, 1871, 1900, 1929,
-  1958, 1990, 2021, 2054, 2088, 2123, 2159, 2197,
-  2236, 2276, 2319, 2363, 2410, 2458, 2508, 2561,
-  2616, 2675, 2737, 2802, 2871, 2944, 3020, 3102,
-  3188, 3280, 3375, 3478, 3586, 3702, 3823, 3953,
-  4089, 4236, 4394, 4559, 4737, 4929, 5130, 5347,
-};
-
-static const int16_t dc_qlookup_12[QINDEX_RANGE] = {
-  4, 12, 18, 25, 33, 41, 50, 60,
-  70, 80, 91, 103, 115, 127, 140, 153,
-  166, 180, 194, 208, 222, 237, 251, 266,
-  281, 296, 312, 327, 343, 358, 374, 390,
-  405, 421, 437, 453, 469, 484, 500, 516,
-  532, 548, 564, 580, 596, 611, 627, 643,
-  659, 674, 690, 706, 721, 737, 752, 768,
-  783, 798, 814, 829, 844, 859, 874, 889,
-  904, 919, 934, 949, 964, 978, 993, 1008,
-  1022, 1037, 1051, 1065, 1080, 1094, 1108, 1122,
-  1136, 1151, 1165, 1179, 1192, 1206, 1220, 1234,
-  1248, 1261, 1275, 1288, 1302, 1315, 1329, 1342,
-  1368, 1393, 1419, 1444, 1469, 1494, 1519, 1544,
-  1569, 1594, 1618, 1643, 1668, 1692, 1717, 1741,
-  1765, 1789, 1814, 1838, 1862, 1885, 1909, 1933,
-  1957, 1992, 2027, 2061, 2096, 2130, 2165, 2199,
-  2233, 2267, 2300, 2334, 2367, 2400, 2434, 2467,
-  2499, 2532, 2575, 2618, 2661, 2704, 2746, 2788,
-  2830, 2872, 2913, 2954, 2995, 3036, 3076, 3127,
-  3177, 3226, 3275, 3324, 3373, 3421, 3469, 3517,
-  3565, 3621, 3677, 3733, 3788, 3843, 3897, 3951,
-  4005, 4058, 4119, 4181, 4241, 4301, 4361, 4420,
-  4479, 4546, 4612, 4677, 4742, 4807, 4871, 4942,
-  5013, 5083, 5153, 5222, 5291, 5367, 5442, 5517,
-  5591, 5665, 5745, 5825, 5905, 5984, 6063, 6149,
-  6234, 6319, 6404, 6495, 6587, 6678, 6769, 6867,
-  6966, 7064, 7163, 7269, 7376, 7483, 7599, 7715,
-  7832, 7958, 8085, 8214, 8352, 8492, 8635, 8788,
-  8945, 9104, 9275, 9450, 9639, 9832, 10031, 10245,
-  10465, 10702, 10946, 11210, 11482, 11776, 12081, 12409,
-  12750, 13118, 13501, 13913, 14343, 14807, 15290, 15812,
-  16356, 16943, 17575, 18237, 18949, 19718, 20521, 21387,
 };
 
 static const int16_t ac_qlookup[QINDEX_RANGE] = {
@@ -267,25 +162,7 @@ clamp (int value, int low, int high)
 }
 
 int16_t
-vp9_dc_quant (int qindex, int delta, int bit_depth)
-{
-  const uint8_t q_table_idx = clamp (qindex + delta, 0, MAXQ);
-
-  switch (bit_depth) {
-    case 8:
-      return dc_qlookup[q_table_idx];
-    case 10:
-      return dc_qlookup_10[q_table_idx];
-    case 12:
-      return dc_qlookup_12[q_table_idx];
-    default:
-      return -1;
-  }
-  return -1;
-}
-
-int16_t
-vp9_ac_quant (int qindex, int delta, int bit_depth)
+brc_libvpx_vp9_ac_quant (int qindex, int delta, int bit_depth)
 {
   const uint8_t q_table_idx = clamp (qindex + delta, 0, MAXQ);
 
@@ -303,7 +180,7 @@ vp9_ac_quant (int qindex, int delta, int bit_depth)
 }
 
 #define INLINE inline
-int frame_is_intra_only(const VP9_COMMON *const cm) {
+int brc_libvpx_vp9_frame_is_intra_only(const VP9_COMMON *const cm) {
   return cm->frame_type == KEY_FRAME || cm->intra_only;
 }   
     
@@ -311,7 +188,7 @@ double fclamp(double value, double low, double high) {
   return value < low ? low : (value > high ? high : value);
 }   
 
-int is_one_pass_cbr_svc(const struct VP9_COMP *const cpi) {
+int brc_libvpx_is_one_pass_cbr_svc(const struct VP9_COMP *const cpi) {
   return (cpi->use_svc && cpi->oxcf.pass == 0);
 }
 
@@ -346,7 +223,7 @@ static INLINE int calc_mi_size(int len) {
   return len + MI_BLOCK_SIZE;
 }
 
-void vp9_set_mi_size(int *mi_rows, int *mi_cols, int *mi_stride, int width,
+static void vp9_set_mi_size(int *mi_rows, int *mi_cols, int *mi_stride, int width,
                      int height) {
   const int aligned_width = ALIGN_POWER_OF_TWO(width, MI_SIZE_LOG2);
   const int aligned_height = ALIGN_POWER_OF_TWO(height, MI_SIZE_LOG2);
@@ -355,14 +232,14 @@ void vp9_set_mi_size(int *mi_rows, int *mi_cols, int *mi_stride, int width,
   *mi_stride = calc_mi_size(*mi_cols);
 }
 
-void vp9_set_mb_size(int *mb_rows, int *mb_cols, int *mb_num, int mi_rows,
+static void vp9_set_mb_size(int *mb_rows, int *mb_cols, int *mb_num, int mi_rows,
                      int mi_cols) {
   *mb_cols = (mi_cols + 1) >> 1;
   *mb_rows = (mi_rows + 1) >> 1;
   *mb_num = (*mb_rows) * (*mb_cols);
 } 
 
-void vp9_set_mb_mi(VP9_COMMON *cm, int width, int height) {
+void brc_libvpx_vp9_set_mb_mi(VP9_COMMON *cm, int width, int height) {
   vp9_set_mi_size(&cm->mi_rows, &cm->mi_cols, &cm->mi_stride, width, height);
   vp9_set_mb_size(&cm->mb_rows, &cm->mb_cols, &cm->MBs, cm->mi_rows,
                   cm->mi_cols); 
@@ -378,7 +255,7 @@ static const int quantizer_to_qindex[] = {
   208, 212, 216, 220, 224, 228, 232, 236, 240, 244, 249, 255,
 };    
   
-int vp9_quantizer_to_qindex(int quantizer) {
+int brc_libvpx_vp9_quantizer_to_qindex(int quantizer) {
   return quantizer_to_qindex[quantizer];
 } 
 
@@ -411,7 +288,7 @@ static int kf_low = 300;
 #define ROUND_POWER_OF_TWO(value, n) (((value) + (1 << ((n)-1))) >> (n))
 #define ROUND64_POWER_OF_TWO(value, n) (((value) + (1ULL << ((n)-1))) >> (n))
 
-void vp9_set_rc_buffer_sizes(RATE_CONTROL *rc,
+void brc_libvpx_vp9_set_rc_buffer_sizes(RATE_CONTROL *rc,
                                 const VP9EncoderConfig *oxcf) {
   const int64_t bandwidth = oxcf->target_bandwidth;
   const int64_t starting = oxcf->starting_buffer_level_ms;
@@ -430,7 +307,7 @@ void vp9_set_rc_buffer_sizes(RATE_CONTROL *rc,
   rc->buffer_level = VPXMIN(rc->buffer_level, rc->maximum_buffer_size);
 }
 
-void vp9_check_reset_rc_flag(VP9_COMP *cpi) {
+void brc_libvpx_vp9_check_reset_rc_flag(VP9_COMP *cpi) {
   RATE_CONTROL *rc = &cpi->rc;
 
   if (cpi->common.current_video_frame >
@@ -451,7 +328,7 @@ void vp9_check_reset_rc_flag(VP9_COMP *cpi) {
   }
 }
 
-void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
+void brc_libvpx_vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
   VP9_COMMON *const cm = &cpi->common;
   RATE_CONTROL *const rc = &cpi->rc;
   int last_w = cpi->oxcf.width;
@@ -466,7 +343,7 @@ void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
 
   rc->baseline_gf_interval = (MIN_GF_INTERVAL + MAX_GF_INTERVAL) / 2;
 
-  vp9_set_rc_buffer_sizes(rc, &cpi->oxcf);
+  brc_libvpx_vp9_set_rc_buffer_sizes(rc, &cpi->oxcf);
 
     // Under a configuration change, where maximum_buffer_size may change,
   // keep buffer level clipped to the maximum allowed buffer size.
@@ -474,7 +351,7 @@ void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
   rc->buffer_level = VPXMIN(rc->buffer_level, rc->maximum_buffer_size);
 
   // Set up frame rate and related parameters rate control values.
-  vp9_new_framerate(cpi, cpi->framerate);
+  brc_libvpx_vp9_new_framerate(cpi, cpi->framerate);
 
   // Set absolute upper and lower quality limits
   rc->worst_quality = cpi->oxcf.worst_allowed_q;
@@ -499,20 +376,20 @@ void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf) {
                                            (int)cpi->oxcf.target_bandwidth);
   }
 
-  vp9_check_reset_rc_flag(cpi);
+  brc_libvpx_vp9_check_reset_rc_flag(cpi);
 }
 
 // These functions use formulaic calculations to make playing with the
 // quantizer tables easier. If necessary they can be replaced by lookup
 // tables if and when things settle down in the experimental bitstream
-double vp9_convert_qindex_to_q(int qindex, vpx_bit_depth_t bit_depth) {
+static double vp9_convert_qindex_to_q(int qindex, vpx_bit_depth_t bit_depth) {
 // Convert the index to a real Q value (scaled down to match old Q values)
   switch (bit_depth) {
-    case VPX_BITS_8: return vp9_ac_quant(qindex, 0, bit_depth) / 4.0;
-    case VPX_BITS_10: return vp9_ac_quant(qindex, 0, bit_depth) / 16.0;
+    case VPX_BITS_8: return brc_libvpx_vp9_ac_quant(qindex, 0, bit_depth) / 4.0;
+    case VPX_BITS_10: return brc_libvpx_vp9_ac_quant(qindex, 0, bit_depth) / 16.0;
     default:
       //assert(bit_depth == VPX_BITS_12);
-      return vp9_ac_quant(qindex, 0, bit_depth) / 64.0;
+      return brc_libvpx_vp9_ac_quant(qindex, 0, bit_depth) / 64.0;
   }
 }
 
@@ -551,7 +428,7 @@ static void init_minq_luts(int *kf_low_m, int *kf_high_m, int *arfgf_low,
   }
 }
 
-void vp9_rc_init_minq_luts(void) {
+void brc_libvpx_vp9_rc_init_minq_luts(void) {
   init_minq_luts(kf_low_motion_minq_8, kf_high_motion_minq_8,
                  arfgf_low_motion_minq_8, arfgf_high_motion_minq_8,
                  inter_minq_8, rtc_minq_8, VPX_BITS_8);
@@ -561,17 +438,6 @@ void vp9_rc_init_minq_luts(void) {
   init_minq_luts(kf_low_motion_minq_12, kf_high_motion_minq_12,
                  arfgf_low_motion_minq_12, arfgf_high_motion_minq_12,
                  inter_minq_12, rtc_minq_12, VPX_BITS_12);
-}
-
-int vp9_convert_q_to_qindex(double q_val, vpx_bit_depth_t bit_depth) {
-  int i;
-
-  for (i = 0; i < QINDEX_RANGE; ++i)
-    if (vp9_convert_qindex_to_q(i, bit_depth) >= q_val) break;
-
-  if (i == QINDEX_RANGE) i--;
-
-  return i;
 }
 
 static int vp9_rc_bits_per_mb(FRAME_TYPE frame_type, int qindex,
@@ -587,7 +453,7 @@ static int vp9_rc_bits_per_mb(FRAME_TYPE frame_type, int qindex,
   return (int)(enumerator * correction_factor / q);
 }
 
-int vp9_estimate_bits_at_q(FRAME_TYPE frame_type, int q, int mbs,
+static int vp9_estimate_bits_at_q(FRAME_TYPE frame_type, int q, int mbs,
                            double correction_factor,
                            vpx_bit_depth_t bit_depth) {
   const int bpm =
@@ -612,7 +478,7 @@ static int vp9_rc_clamp_iframe_target_size(const VP9_COMP *const cpi, int target
 // way for CBR mode, for the buffering updates below. Look into removing one
 // of these (i.e., bits_off_target).
 // Update the buffer level before encoding with the per-frame-bandwidth,
-void update_buffer_level_preencode(VP9_COMP *cpi) {
+void brc_libvpx_update_buffer_level_preencode(VP9_COMP *cpi) {
   RATE_CONTROL *const rc = &cpi->rc;
   rc->bits_off_target += rc->avg_frame_bandwidth;
   // Clip the buffer level to the maximum specified buffer size.
@@ -679,12 +545,12 @@ static void update_buffer_level_postencode(VP9_COMP *cpi,
 
   rc->buffer_level = rc->bits_off_target;
 
-  if (is_one_pass_cbr_svc(cpi)) {
+  if (brc_libvpx_is_one_pass_cbr_svc(cpi)) {
     update_layer_buffer_level_postencode(&cpi->svc, encoded_frame_size);
   }
 }
 
-int vp9_rc_get_default_min_gf_interval(int width, int height,
+static int vp9_rc_get_default_min_gf_interval(int width, int height,
                                        double framerate) {
   // Assume we do not need any constraint lower than 4K 20 fps
   static const double factor_safe = 3840 * 2160 * 20.0;
@@ -703,13 +569,13 @@ int vp9_rc_get_default_min_gf_interval(int width, int height,
   // 4K60: 12
 }
 
-int vp9_rc_get_default_max_gf_interval(double framerate, int min_gf_interval) {
+static int vp9_rc_get_default_max_gf_interval(double framerate, int min_gf_interval) {
   int interval = VPXMIN(MAX_GF_INTERVAL, (int)(framerate * 0.75));
   interval += (interval & 0x01);  // Round to even value
   return VPXMAX(interval, min_gf_interval);
 }
 
-void vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL *rc) {
+void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL *rc) {
   int i;
 
   if (pass == 0 && oxcf->rc_mode == VPX_CBR) {
@@ -791,121 +657,6 @@ void vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL *rc) {
   rc->show_arf_as_gld = 0;
 }
 
-static int check_buffer_above_thresh(VP9_COMP *cpi, int drop_mark) {
-  //SVC *svc = &cpi->svc;
-  //if (!cpi->use_svc 
-#if 0 
-	|| cpi->svc.framedrop_mode != FULL_SUPERFRAME_DROP
-#endif
-		//  ) {
-  {
-    RATE_CONTROL *const rc = &cpi->rc;
-    return (rc->buffer_level > drop_mark);
-  }
-}
-
-static int check_buffer_below_thresh(VP9_COMP *cpi, int drop_mark) {
-  //SVC *svc = &cpi->svc;
-//  if (!cpi->use_svc
-#if 0 
-		  || cpi->svc.framedrop_mode == LAYER_DROP
-#endif
-//		  ) {
- {
-    RATE_CONTROL *const rc = &cpi->rc;
-    return (rc->buffer_level <= drop_mark);
-  }
-#if 0
-  else {
-    int i;
-    // For SVC in the constrained framedrop mode (svc->framedrop_mode =
-    // CONSTRAINED_LAYER_DROP or FULL_SUPERFRAME_DROP): the condition on
-    // buffer (if its below threshold, so drop frame) is checked on current
-    // and upper spatial layers. For FULL_SUPERFRAME_DROP mode if any
-    // spatial layer is <= threshold, then we return 1 (drop).
-    for (i = svc->spatial_layer_id; i < svc->number_spatial_layers; ++i) {
-      const int layer = LAYER_IDS_TO_IDX(i, svc->temporal_layer_id,
-                                         svc->number_temporal_layers);
-      LAYER_CONTEXT *lc = &svc->layer_context[layer];
-      RATE_CONTROL *lrc = &lc->rc;
-      // Exclude check for layer whose bitrate is 0.
-      if (lc->target_bandwidth > 0) {
-        const int drop_mark_layer = (int)(cpi->svc.framedrop_thresh[i] *
-                                          lrc->optimal_buffer_level / 100);
-        if (cpi->svc.framedrop_mode == FULL_SUPERFRAME_DROP) {
-          if (lrc->buffer_level <= drop_mark_layer) return 1;
-        } else {
-          if (!(lrc->buffer_level <= drop_mark_layer)) return 0;
-        }
-      }
-    }
-    if (cpi->svc.framedrop_mode == FULL_SUPERFRAME_DROP)
-      return 0;
-    else
-      return 1;
-  }
-#endif
-}
-
-int vp9_test_drop(VP9_COMP *cpi) {
-  const VP9EncoderConfig *oxcf = &cpi->oxcf;
-  RATE_CONTROL *const rc = &cpi->rc;
-  //SVC *svc = &cpi->svc;
-  int drop_frames_water_mark = oxcf->drop_frames_water_mark;
-#if 0
-  if (cpi->use_svc) {
-    // If we have dropped max_consec_drop frames, then we don't
-    // drop this spatial layer, and reset counter to 0.
-    if (svc->drop_count[svc->spatial_layer_id] == svc->max_consec_drop) {
-      svc->drop_count[svc->spatial_layer_id] = 0;
-      return 0;
-    } else {
-      drop_frames_water_mark = svc->framedrop_thresh[svc->spatial_layer_id];
-    }
-  }
-#endif
-  if (!drop_frames_water_mark
-		 /* ||
-       (svc->spatial_layer_id > 0 &&
-       svc->framedrop_mode == FULL_SUPERFRAME_DROP) */) {
-    return 0;
-  } else {
-#if 0
-    if ((rc->buffer_level < 0 && svc->framedrop_mode != FULL_SUPERFRAME_DROP) ||
-        (check_buffer_below_thresh(cpi, -1) &&
-         svc->framedrop_mode == FULL_SUPERFRAME_DROP)) {
-      // Always drop if buffer is below 0.
-      return 1;
-    } else 
-#endif
-    {
-      // If buffer is below drop_mark, for now just drop every other frame
-      // (starting with the next frame) until it increases back over drop_mark.
-      int drop_mark =
-          (int)(drop_frames_water_mark * rc->optimal_buffer_level / 100);
-      if (check_buffer_above_thresh(cpi, drop_mark) &&
-          (rc->decimation_factor > 0)) {
-        --rc->decimation_factor;
-      } else if (check_buffer_below_thresh(cpi, drop_mark) &&
-                 rc->decimation_factor == 0) {
-        rc->decimation_factor = 1;
-      }
-      if (rc->decimation_factor > 0) {
-        if (rc->decimation_count > 0) {
-          --rc->decimation_count;
-          return 1;
-        } else {
-          rc->decimation_count = rc->decimation_factor;
-          return 0;
-        }
-      } else {
-        rc->decimation_count = 0;
-        return 0;
-      }
-    }
-  }
-}
-
 static int adjust_q_cbr(const VP9_COMP *cpi, int q) {
   // This makes sure q is between oscillating Qs to prevent resonance.
   if (!cpi->rc.reset_high_source_sad &&
@@ -931,7 +682,7 @@ static double get_rate_correction_factor(const VP9_COMP *cpi) {
   const VP9_COMMON *const cm = &cpi->common;
   double rcf;
 
-  if (frame_is_intra_only(cm)) {
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
     rcf = rc->rate_correction_factors[KF_STD];
   } else {
       rcf = rc->rate_correction_factors[INTER_NORMAL];
@@ -949,7 +700,7 @@ static void set_rate_correction_factor(VP9_COMP *cpi, double factor) {
 
   factor = fclamp(factor, MIN_BPB_FACTOR, MAX_BPB_FACTOR);
 
-  if (frame_is_intra_only(cm)) {
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
     rc->rate_correction_factors[KF_STD] = factor;
   } 
   else {
@@ -1118,7 +869,7 @@ static int calc_active_worst_quality_one_pass_cbr(const VP9_COMP *cpi) {
   int active_worst_quality;
   int ambient_qp;
   unsigned int num_frames_weight_key = 5 * 1; //Note:one temporal layer
-  if (frame_is_intra_only(cm) || rc->reset_high_source_sad || rc->force_max_q)
+  if (brc_libvpx_vp9_frame_is_intra_only(cm) || rc->reset_high_source_sad || rc->force_max_q)
     return rc->worst_quality;
   // For ambient_qp we use minimum of avg_frame_qindex[KEY_FRAME/INTER_FRAME]
   // for the first few frames following key frame. These are both initialized
@@ -1185,7 +936,7 @@ static int rc_pick_q_and_bounds_one_pass_cbr(const VP9_COMP *cpi,
   int *rtc_minq;
   ASSIGN_MINQ_TABLE(cm->bit_depth, rtc_minq);
 
-  if (frame_is_intra_only(cm)) {
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
     active_best_quality = rc->best_quality;
     // Handle the special case for key frames forced when we have reached
     // the maximum key frame interval. Here force the Q to a range
@@ -1253,7 +1004,7 @@ static int rc_pick_q_and_bounds_one_pass_cbr(const VP9_COMP *cpi,
   *bottom_index = active_best_quality;
 
   // Special case code to try and match quality with forced key frames
-  if (frame_is_intra_only(cm) && rc->this_key_frame_forced) {
+  if (brc_libvpx_vp9_frame_is_intra_only(cm) && rc->this_key_frame_forced) {
     q = rc->last_boosted_qindex;
   } else {
     q = vp9_rc_regulate_q(cpi, rc->this_frame_target, active_best_quality,
@@ -1279,7 +1030,7 @@ static int rc_pick_q_and_bounds_one_pass_cbr(const VP9_COMP *cpi,
 
 #define STATIC_MOTION_THRESH 95
 
-int vp9_rc_pick_q_and_bounds(const VP9_COMP *cpi, int *bottom_index,
+int brc_libvpx_vp9_rc_pick_q_and_bounds(const VP9_COMP *cpi, int *bottom_index,
                              int *top_index) {
   int q = 0;
   if (cpi->oxcf.pass == 0) {
@@ -1297,7 +1048,7 @@ int vp9_rc_pick_q_and_bounds(const VP9_COMP *cpi, int *bottom_index,
   return q;
 }
 
-void vp9_rc_set_frame_target(VP9_COMP *cpi, int target) {
+void brc_libvpx_vp9_rc_set_frame_target(VP9_COMP *cpi, int target) {
   const VP9_COMMON *const cm = &cpi->common;
   RATE_CONTROL *const rc = &cpi->rc;
 
@@ -1352,23 +1103,7 @@ static void update_golden_frame_stats(VP9_COMP *cpi) {
   }
 }
 
-void vp9_set_quantizer(VP9_COMP *cpi, int q) {
-  VP9_COMMON *cm = &cpi->common;
-  // quantizer has to be reinitialized with vp9_init_quantizer() if any
-  // delta_q changes.
-  cm->base_qindex = q;
-#if 0
-  cm->y_dc_delta_q = 0;
-  cm->uv_dc_delta_q = 0;
-  cm->uv_ac_delta_q = 0;
-  if (cpi->oxcf.delta_q_uv != 0) {
-    cm->uv_dc_delta_q = cm->uv_ac_delta_q = cpi->oxcf.delta_q_uv;
-    //vp9_init_quantizer(cpi);
-  }
-#endif
-}
-
-void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
+void brc_libvpx_vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
   const VP9_COMMON *const cm = &cpi->common;
   const VP9EncoderConfig *const oxcf = &cpi->oxcf;
   RATE_CONTROL *const rc = &cpi->rc;
@@ -1382,7 +1117,7 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
   vp9_rc_update_rate_correction_factors(cpi);
 
   // Keep a record of last Q and ambient average Q.
-  if (frame_is_intra_only(cm)) {
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
     rc->last_q[KEY_FRAME] = qindex;
     rc->avg_frame_qindex[KEY_FRAME] =
         ROUND_POWER_OF_TWO(3 * rc->avg_frame_qindex[KEY_FRAME] + qindex, 2);
@@ -1424,13 +1159,13 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
     rc->last_boosted_qindex = qindex;
   }
 
-  if (frame_is_intra_only(cm)) rc->last_kf_qindex = qindex;
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) rc->last_kf_qindex = qindex;
 
   update_buffer_level_postencode(cpi, rc->projected_frame_size);
 
   // Rolling monitors of whether we are over or underspending used to help
   // regulate min and Max Q in two pass.
-  if (!frame_is_intra_only(cm)) {
+  if (!brc_libvpx_vp9_frame_is_intra_only(cm)) {
     rc->rolling_target_bits = ROUND_POWER_OF_TWO(
         rc->rolling_target_bits * 3 + rc->this_frame_target, 2);
     rc->rolling_actual_bits = ROUND_POWER_OF_TWO(
@@ -1450,7 +1185,7 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
   if (!cpi->use_svc) {
 	  //Note: is_altreaf_enabled??
     if (is_altref_enabled(cpi) && cpi->refresh_alt_ref_frame &&
-        (!frame_is_intra_only(cm)))
+        (!brc_libvpx_vp9_frame_is_intra_only(cm)))
       // Update the alternate reference frame stats as appropriate.
       update_alt_ref_frame_stats(cpi);
     else
@@ -1479,7 +1214,7 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
     }
   }
 
-  if (frame_is_intra_only(cm)) rc->frames_since_key = 0;
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) rc->frames_since_key = 0;
   if (cm->show_frame) {
     rc->frames_since_key++;
     rc->frames_to_key--;
@@ -1497,12 +1232,12 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
 #if 0
   //Fixme: No VBR Support yet
   if (oxcf->pass == 0) {
-    if (!frame_is_intra_only(cm))
+    if (!brc_libvpx_vp9_frame_is_intra_only(cm))
       if (cpi->sf.use_altref_onepass) update_altref_usage(cpi);
     cpi->rc.last_frame_is_src_altref = cpi->rc.is_src_frame_alt_ref;
   }
 #endif
-  if (!frame_is_intra_only(cm)) rc->reset_high_source_sad = 0;
+  if (!brc_libvpx_vp9_frame_is_intra_only(cm)) rc->reset_high_source_sad = 0;
 
   rc->last_avg_frame_bandwidth = rc->avg_frame_bandwidth;
   if (cpi->use_svc && svc->spatial_layer_id < svc->number_spatial_layers - 1)
@@ -1510,7 +1245,7 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
 
 #if 0
   if (oxcf->pass == 0) {
-    if (!frame_is_intra_only(cm) &&
+    if (!brc_libvpx_vp9_frame_is_intra_only(cm) &&
         (!cpi->use_svc
 	 ||
          (cpi->use_svc &&
@@ -1538,7 +1273,7 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
 
     cpi->rc.last_frame_is_src_altref = cpi->rc.is_src_frame_alt_ref;
   }
-  if (!frame_is_intra_only(cm)) rc->reset_high_source_sad = 0;
+  if (!brc_libvpx_vp9_frame_is_intra_only(cm)) rc->reset_high_source_sad = 0;
 
   rc->last_avg_frame_bandwidth = rc->avg_frame_bandwidth;
 
@@ -1547,7 +1282,7 @@ void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
 #endif
 }
 
-int vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi) {
+int brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi) {
   const VP9EncoderConfig *oxcf = &cpi->oxcf;
   const RATE_CONTROL *rc = &cpi->rc;
   const SVC *const svc = &cpi->svc;
@@ -1569,7 +1304,7 @@ int vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi) {
     target = rc->avg_frame_bandwidth;
   }
 
-  if (is_one_pass_cbr_svc(cpi)) {
+  if (brc_libvpx_is_one_pass_cbr_svc(cpi)) {
     // Note that for layers, avg_frame_bandwidth is the cumulative
     // per-frame-bandwidth. For the target size of this frame, use the
     // layer average frame size (i.e., non-cumulative per-frame-bw).
@@ -1598,7 +1333,7 @@ int vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi) {
   return VPXMAX(min_frame_target, target);
 }
 
-int vp9_calc_iframe_target_size_one_pass_cbr(VP9_COMP *cpi) {
+int brc_libvpx_vp9_calc_iframe_target_size_one_pass_cbr(VP9_COMP *cpi) {
   RATE_CONTROL *rc = &cpi->rc;
   const VP9EncoderConfig *oxcf = &cpi->oxcf;
   const SVC *const svc = &cpi->svc;
@@ -1629,7 +1364,7 @@ int vp9_calc_iframe_target_size_one_pass_cbr(VP9_COMP *cpi) {
   return vp9_rc_clamp_iframe_target_size(cpi, target);
 }
 
-void vp9_rc_get_svc_params(VP9_COMP *cpi) {
+void brc_libvpx_vp9_rc_get_svc_params(VP9_COMP *cpi) {
   VP9_COMMON *const cm = &cpi->common;
   RATE_CONTROL *const rc = &cpi->rc;
   SVC *const svc = &cpi->svc;
@@ -1645,7 +1380,7 @@ void vp9_rc_get_svc_params(VP9_COMP *cpi) {
   // flag is set for spatial layer 0.
   if (cm->frame_type == KEY_FRAME) {
     rc->source_alt_ref_active = 0;
-    if (is_one_pass_cbr_svc(cpi)) {
+    if (brc_libvpx_is_one_pass_cbr_svc(cpi)) {
       if (cm->current_video_frame > 0) vp9_svc_reset_temporal_layers(cpi, 1);
       layer = LAYER_IDS_TO_IDX(svc->spatial_layer_id, svc->temporal_layer_id,
                                svc->number_temporal_layers);
@@ -1653,11 +1388,11 @@ void vp9_rc_get_svc_params(VP9_COMP *cpi) {
       //cpi->ref_frame_flags &= (~VP9_LAST_FLAG & ~VP9_GOLD_FLAG & ~VP9_ALT_FLAG);
       // Assumption here is that LAST_FRAME is being updated for a keyframe.
       // Thus no change in update flags.
-      target = vp9_calc_iframe_target_size_one_pass_cbr(cpi);
+      target = brc_libvpx_vp9_calc_iframe_target_size_one_pass_cbr(cpi);
     }
   } else {
     cm->frame_type = INTER_FRAME;
-    if (is_one_pass_cbr_svc(cpi)) {
+    if (brc_libvpx_is_one_pass_cbr_svc(cpi)) {
       LAYER_CONTEXT *lc = &svc->layer_context[layer];
       // Add condition current_video_frame > 0 for the case where first frame
       // is intra only followed by overlay/copy frame. In this case we don't
@@ -1666,7 +1401,7 @@ void vp9_rc_get_svc_params(VP9_COMP *cpi) {
           (svc->spatial_layer_id == 0 && cm->current_video_frame > 0)
               ? 0
               : svc->layer_context[svc->temporal_layer_id].is_key_frame;
-      target = vp9_calc_pframe_target_size_one_pass_cbr(cpi);
+      target = brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(cpi);
     }
   }
 
@@ -1678,11 +1413,11 @@ void vp9_rc_get_svc_params(VP9_COMP *cpi) {
 
   //ToDo: Add support for intra-only
 
-  vp9_rc_set_frame_target(cpi, target);
+  brc_libvpx_vp9_rc_set_frame_target(cpi, target);
   if (cm->show_frame) update_buffer_level_svc_preencode(cpi);
 }
 
-void vp9_rc_get_one_pass_cbr_params(VP9_COMP *cpi) {
+void brc_libvpx_vp9_rc_get_one_pass_cbr_params(VP9_COMP *cpi) {
   VP9_COMMON *const cm = &cpi->common;
   RATE_CONTROL *const rc = &cpi->rc;
   int target;
@@ -1707,15 +1442,15 @@ void vp9_rc_get_one_pass_cbr_params(VP9_COMP *cpi) {
     rc->gfu_boost = DEFAULT_GF_BOOST;
   }
 
-  if (frame_is_intra_only(cm)) {
-    target = vp9_calc_iframe_target_size_one_pass_cbr(cpi);
+  if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
+    target = brc_libvpx_vp9_calc_iframe_target_size_one_pass_cbr(cpi);
   }
   else {
-    target = vp9_calc_pframe_target_size_one_pass_cbr(cpi);
+    target = brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(cpi);
   }
-  vp9_rc_set_frame_target(cpi, target);
+  brc_libvpx_vp9_rc_set_frame_target(cpi, target);
 
-  if (cm->show_frame) update_buffer_level_preencode(cpi);
+  if (cm->show_frame) brc_libvpx_update_buffer_level_preencode(cpi);
 }
 
 static int vp9_compute_qdelta(const RATE_CONTROL *rc, double qstart, double qtarget,
@@ -1739,7 +1474,7 @@ static int vp9_compute_qdelta(const RATE_CONTROL *rc, double qstart, double qtar
   return target_index - start_index;
 }
 
-void vp9_rc_set_gf_interval_range(const VP9_COMP *const cpi,
+void brc_libvpx_vp9_rc_set_gf_interval_range(const VP9_COMP *const cpi,
                                   RATE_CONTROL *const rc) {
   const VP9EncoderConfig *const oxcf = &cpi->oxcf;
 
@@ -1789,11 +1524,11 @@ static void vp9_rc_update_framerate(VP9_COMP *cpi) {
   rc->max_frame_bandwidth =
       VPXMAX(VPXMAX((cm->MBs * MAX_MB_RATE), MAXRATE_1080P), vbr_max_bits);
 
-  vp9_rc_set_gf_interval_range(cpi, rc);
+  brc_libvpx_vp9_rc_set_gf_interval_range(cpi, rc);
 }
 
 void
-vp9_new_framerate (VP9_COMP * cpi, double framerate)
+brc_libvpx_vp9_new_framerate (VP9_COMP * cpi, double framerate)
 {
   cpi->framerate = framerate < 0.1 ? 30 : framerate;
   vp9_rc_update_framerate (cpi);

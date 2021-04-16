@@ -16,9 +16,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "av1_ratectrl.h"
-#include "av1_svc_layercontext.h"
-#include "av1_common.h"
+#include "aom_av1_ratectrl.h"
+#include "aom_av1_svc_layercontext.h"
+#include "aom_av1_common.h"
 
 #define USE_UNRESTRICTED_Q_IN_CQ_MODE 0
 

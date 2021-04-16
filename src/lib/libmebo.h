@@ -82,7 +82,7 @@
  *   assert (status == LIBMEBO_STATUS_SUCCESS);
  *
  *   // Optional:libmebo can also recommend the loop-filter strength
- *   status = libmebo_rate_contoller_get_loop_filter_level (rc, &lf);
+ *   status = libmebo_rate_controller_get_loop_filter_level (rc, &lf);
  * 
  *   // Ensure the status == LIBMEBO_STATUS_SUCCESS before using
  *   // the loop filter level since some algos are not supporting this API
@@ -96,6 +96,9 @@
  * }
  * \endcode
 */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef void* BrcCodecEnginePtr;
 
@@ -166,10 +169,18 @@ typedef struct _LibMeboRCFrameParams {
   int temporal_layer_id;
 } LibMeboRCFrameParams;
 
-/* Temporal Scalability: Maximum number of coding layers */
+/* Temporal Scalability: Maximum number of coding layers.
+ * Not all codecs are supporting the LIBMEBO_TS_MAX_LAYERS. The
+ * libmebo_rate_controller_init() will perform the codec specific
+ * layer number validation.
+ */
 #define LIBMEBO_TS_MAX_LAYERS 8
 
-/* Spatial Scalability: Maximum number of Spatial coding layers */
+/* Spatial Scalability: Maximum number of Spatial coding layers.
+ * Not all codecs are supporting the LIBMEBO_SS_MAX_LAYERS. The
+ * libmebo_rate_controller_init() will perform the codec specific
+ * layer number validation.
+ */
 #define LIBMEBO_SS_MAX_LAYERS 4
 
 /** 
@@ -408,7 +419,7 @@ void libmebo_rate_controller_free (LibMeboRateController *rc);
  */
 LibMeboStatus
 libmebo_rate_controller_update_config (LibMeboRateController *rc,
-                                                     LibMeboRateControllerConfig*rc_cfg);
+                                       LibMeboRateControllerConfig*rc_cfg);
 
 /**
  * libmebo_rate_controller_post_encode_update:
@@ -416,14 +427,14 @@ libmebo_rate_controller_update_config (LibMeboRateController *rc,
  * This is a post-encode operation.
  * Update the currently encoded frame's size at #rc instance.
  *
- * \param[in]    rc                  the LibMeboRateController to update framesize
- * \param[in]    encoded_frame_size  size of the compressed frame
+ * \param[in]    rc                  The LibMeboRateController to update framesize
+ * \param[in]    encoded_frame_size  Size of the compressed frame
  *
  * \returns  Returns a LibMeboStatus
  */
 LibMeboStatus
 libmebo_rate_controller_post_encode_update (LibMeboRateController *rc,
-                                                uint64_t encoded_frame_size);
+                                            uint64_t encoded_frame_size);
 
 /**
  * libmebo_rate_controller_compute_qp:
@@ -455,7 +466,7 @@ LibMeboStatus
 libmebo_rate_controller_get_qp(LibMeboRateController *rc, int *qp);
 
 /**
- * libmebo_rate_contoller_get_loop_filter_level:
+ * libmebo_rate_controller_get_loop_filter_level:
  *
  * Retrieve the current loop filter strength estimate
  * from libmebo instance
@@ -466,6 +477,10 @@ libmebo_rate_controller_get_qp(LibMeboRateController *rc, int *qp);
  * \return Retruns LibMeboStatus code
  */
 LibMeboStatus
-libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc, int *lf);
+libmebo_rate_controller_get_loop_filter_level(LibMeboRateController *rc, int *lf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

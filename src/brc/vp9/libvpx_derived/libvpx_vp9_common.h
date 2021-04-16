@@ -13,9 +13,9 @@
 #define VPX_VP9_ENCODER_VP9_ENCODER_H_
 
 #include <stdio.h>
-#include "vp9_ratectrl.h"
-#include "vp9_svc_layercontext.h"
-#include "vp9_picklpf.h"
+#include "libvpx_vp9_ratectrl.h"
+#include "libvpx_vp9_svc_layercontext.h"
+#include "libvpx_vp9_picklpf.h"
 
 #define INVALID_IDX (-1)  // Invalid buffer index.
 

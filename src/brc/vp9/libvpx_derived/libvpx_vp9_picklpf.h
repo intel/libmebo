@@ -12,7 +12,7 @@
 #ifndef VPX_VP9_ENCODER_VP9_PICKLPF_H_
 #define VPX_VP9_ENCODER_VP9_PICKLPF_H_
 
-#include "vp9_ratectrl.h"
+#include "libvpx_vp9_ratectrl.h"
 
 #define MAX_LOOP_FILTER 63
 
@@ -31,6 +31,6 @@ struct loopfilter {
   int filter_level;
 };
 
-void vp9_pick_filter_level(struct VP9_COMP *cpi, LPF_PICK_METHOD method);
+void brc_vp9_pick_filter_level(struct VP9_COMP *cpi, LPF_PICK_METHOD method);
 
 #endif  // VPX_VP9_ENCODER_VP9_PICKLPF_H_

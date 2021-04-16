@@ -455,63 +455,40 @@ typedef struct VP9_COMP VP9_COMP;
 typedef struct VP9EncoderConfig VP9EncoderConfig;
 typedef struct VP9_COMMON VP9_COMMON;
 
-int frame_is_intra_only(const VP9_COMMON *const cm);
+int brc_libvpx_vp9_frame_is_intra_only(const VP9_COMMON *const cm);
 
-double fclamp(double value, double low, double high);
+int brc_libvpx_vp9_calc_iframe_target_size_one_pass_cbr(VP9_COMP *cpi);
 
-int vp9_calc_iframe_target_size_one_pass_cbr(VP9_COMP *cpi);
+int brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi);
 
-int vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi);
+void brc_libvpx_vp9_rc_set_frame_target(VP9_COMP *cpi, int target);
 
-void vp9_rc_set_frame_target(VP9_COMP *cpi, int target);
+void brc_libvpx_update_buffer_level_preencode(VP9_COMP *cpi);
 
-void update_buffer_level_preencode(VP9_COMP *cpi);
-
-int vp9_rc_pick_q_and_bounds(const VP9_COMP *cpi, int *bottom_index,
+int brc_libvpx_vp9_rc_pick_q_and_bounds(const VP9_COMP *cpi, int *bottom_index,
                              int *top_index);
 
-void vp9_set_quantizer(VP9_COMP *cpi, int q);
+int brc_libvpx_vp9_quantizer_to_qindex(int quantizer);
 
-int vp9_quantizer_to_qindex(int quantizer);
-
-int vp9_get_level_index(VP9_LEVEL level);
-
-void vp9_set_level_constraint(LevelConstraint *ls, int8_t level_index);
-
-void vp9_set_rc_buffer_sizes(RATE_CONTROL *rc,
+void brc_libvpx_vp9_set_rc_buffer_sizes(RATE_CONTROL *rc,
                                 const VP9EncoderConfig *oxcf);
 
-void vp9_check_reset_rc_flag(VP9_COMP *cpi);
+void brc_libvpx_vp9_check_reset_rc_flag(VP9_COMP *cpi);
 
-void vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf);
+void brc_libvpx_vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *oxcf);
 
-void vp9_rc_set_gf_interval_range(const VP9_COMP *const cpi,
+void brc_libvpx_vp9_rc_set_gf_interval_range(const VP9_COMP *const cpi,
                                   RATE_CONTROL *const rc);
 
-int vp9_test_drop(VP9_COMP *cpi);
-
 void
-vp9_new_framerate (VP9_COMP * cpi, double framerate);
+brc_libvpx_vp9_new_framerate (VP9_COMP * cpi, double framerate);
 
-void vp9_rc_init(const struct VP9EncoderConfig *oxcf, int pass,
+void brc_libvpx_vp9_rc_init(const struct VP9EncoderConfig *oxcf, int pass,
                  RATE_CONTROL *rc);
 
-int vp9_estimate_bits_at_q(FRAME_TYPE frame_type, int q, int mbs,
-                           double correction_factor, vpx_bit_depth_t bit_depth);
+void brc_libvpx_vp9_rc_init_minq_luts(void);
 
-double vp9_convert_qindex_to_q(int qindex, vpx_bit_depth_t bit_depth);
-
-int vp9_convert_q_to_qindex(double q_val, vpx_bit_depth_t bit_depth);
-
-void vp9_rc_init_minq_luts(void);
-
-int vp9_rc_get_default_min_gf_interval(int width, int height, double framerate);
-// Note vp9_rc_get_default_max_gf_interval() requires the min_gf_interval to
-// be passed in to ensure that the max_gf_interval returned is at least as big
-// as that.
-int vp9_rc_get_default_max_gf_interval(double framerate, int min_gf_interval);
-
-int is_one_pass_cbr_svc(const struct VP9_COMP *const cpi);
+int brc_libvpx_is_one_pass_cbr_svc(const struct VP9_COMP *const cpi);
 
 // Generally at the high level, the following flow is expected
 // to be enforced for rate control:
@@ -537,15 +514,15 @@ int is_one_pass_cbr_svc(const struct VP9_COMP *const cpi);
 
 // Functions to set parameters for encoding before the actual
 // encode_frame_to_data_rate() function.
-void vp9_rc_get_one_pass_cbr_params(struct VP9_COMP *cpi);
+void brc_libvpx_vp9_rc_get_one_pass_cbr_params(struct VP9_COMP *cpi);
 
-void vp9_rc_get_svc_params(struct VP9_COMP *cpi);
+void brc_libvpx_vp9_rc_get_svc_params(struct VP9_COMP *cpi);
 
 // Post encode update of the rate control parameters based
 // on bytes used
-void vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used);
+void brc_libvpx_vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used);
 
-void vp9_set_mb_mi(VP9_COMMON *cm, int width, int height);
+void brc_libvpx_vp9_set_mb_mi(VP9_COMMON *cm, int width, int height);
 
-int16_t vp9_ac_quant (int qindex, int delta, int bit_depth);
+int16_t brc_libvpx_vp9_ac_quant (int qindex, int delta, int bit_depth);
 #endif  // LIBMEBO_BRC_VP9_RATECTRL_H

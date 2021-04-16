@@ -11,8 +11,8 @@
 
 #include <math.h>
 
-#include "vp9_svc_layercontext.h"
-#include "vp9_common.h"
+#include "libvpx_vp9_svc_layercontext.h"
+#include "libvpx_vp9_common.h"
 
 #define SMALL_FRAME_WIDTH 32
 #define SMALL_FRAME_HEIGHT 16
@@ -191,7 +191,7 @@ void vp9_update_layer_context_change_config(VP9_COMP *const cpi,
 }
 
 static LAYER_CONTEXT *get_layer_context(VP9_COMP *const cpi) {
-  if (is_one_pass_cbr_svc(cpi))
+  if (brc_libvpx_is_one_pass_cbr_svc(cpi))
     return &cpi->svc.layer_context[cpi->svc.spatial_layer_id *
                                        cpi->svc.number_temporal_layers +
                                    cpi->svc.temporal_layer_id];
@@ -240,7 +240,7 @@ void vp9_update_spatial_layer_framerate(VP9_COMP *const cpi, double framerate) {
   lrc->max_frame_bandwidth = (int)(((int64_t)lrc->avg_frame_bandwidth *
                                     oxcf->two_pass_vbrmax_section) /
                                    100);
-  vp9_rc_set_gf_interval_range(cpi, lrc);
+  brc_libvpx_vp9_rc_set_gf_interval_range(cpi, lrc);
 }
 
 void vp9_restore_layer_context(VP9_COMP *const cpi) {
@@ -253,7 +253,7 @@ void vp9_restore_layer_context(VP9_COMP *const cpi) {
   cpi->oxcf.target_bandwidth = lc->target_bandwidth;
   // Check if it is one_pass_cbr_svc mode and lc->speed > 0 (real-time mode
   // does not use speed = 0).
-  if (is_one_pass_cbr_svc(cpi) && lc->speed > 0) {
+  if (brc_libvpx_is_one_pass_cbr_svc(cpi) && lc->speed > 0) {
     cpi->oxcf.speed = lc->speed;
   }
   // Reset the frames_since_key and frames_to_key counters to their values

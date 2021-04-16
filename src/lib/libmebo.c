@@ -17,9 +17,9 @@
 #include <string.h>
 
 #include "libmebo.h"
-#include "brc/vp9/libvpx_derived/ratectrl_rtc.h"
-#include "brc/vp8/libvpx_derived/ratectrl_rtc.h"
-#include "brc/av1/aom_derived/ratectrl_rtc.h"
+#include "brc/vp9/libvpx_derived/libvpx_vp9_rtc.h"
+#include "brc/vp8/libvpx_derived/libvpx_vp8_rtc.h"
+#include "brc/av1/aom_derived/aom_av1_rtc.h"
 
 #define GET_LAYER_INDEX(s_layer, t_layer, num_temporal_layers) \
 	((s_layer) * (num_temporal_layers) + (t_layer))
@@ -166,7 +166,7 @@ get_backend_impl (LibMeboCodecType codec_type,
  * \return Retruns LibMeboStatus code
  */
 LibMeboStatus
-libmebo_rate_contoller_get_loop_filter_level(LibMeboRateController *rc, int *lf)
+libmebo_rate_controller_get_loop_filter_level(LibMeboRateController *rc, int *lf)
 {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
   LibMeboRateControllerPrivate *priv;

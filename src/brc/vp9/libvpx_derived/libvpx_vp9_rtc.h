@@ -13,36 +13,9 @@
 #ifndef LIBMEBO_VP9_RATECTRL_RTC_H
 #define LIBMEBO_VP9_RATECTRL_RTC_H
 
-#include "vp9_common.h"
+#include "libvpx_vp9_common.h"
 #include "../../../lib/libmebo.h"
 
-#if 0
-typedef struct _LibMeboRateControllerConfig {
-  int width;
-  int height;
-  // 0-63
-  int max_quantizer;
-  int min_quantizer;
-  int64_t target_bandwidth;
-  int64_t buf_initial_sz;
-  int64_t buf_optimal_sz;
-  int64_t buf_sz;
-  int undershoot_pct;
-  int overshoot_pct;
-  int max_intra_bitrate_pct;
-  double framerate;
-  // Number of spatial layers
-  int ss_number_layers;
-  // Number of temporal layers
-  int ts_number_layers;
-  int max_quantizers[VPX_MAX_LAYERS];
-  int min_quantizers[VPX_MAX_LAYERS];
-  int scaling_factor_num[VPX_SS_MAX_LAYERS];
-  int scaling_factor_den[VPX_SS_MAX_LAYERS];
-  int layer_target_bitrate[VPX_MAX_LAYERS];
-  int ts_rate_decimator[VPX_TS_MAX_LAYERS];
-} LibMeboRateControllerConfig;
-#endif
 typedef struct _VP9FrameParamsQpRTC {
   FRAME_TYPE frame_type;
   int spatial_layer_id;

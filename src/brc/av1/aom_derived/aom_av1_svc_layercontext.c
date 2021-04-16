@@ -11,8 +11,8 @@
 
 #include <math.h>
 
-#include "av1_svc_layercontext.h"
-#include "av1_common.h"
+#include "aom_av1_svc_layercontext.h"
+#include "aom_av1_common.h"
 
 void av1_init_layer_context(AV1_COMP *const cpi) {
   const AV1EncoderConfig *const oxcf = &cpi->oxcf;

@@ -12,7 +12,7 @@
 #ifndef VPX_VP9_ENCODER_VP9_SVC_LAYERCONTEXT_H_
 #define VPX_VP9_ENCODER_VP9_SVC_LAYERCONTEXT_H_
 
-#include "vp9_ratectrl.h"
+#include "libvpx_vp9_ratectrl.h"
 
 typedef enum {
   // Inter-layer prediction is on on all frames.

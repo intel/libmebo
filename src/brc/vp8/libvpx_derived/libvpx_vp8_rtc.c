@@ -9,15 +9,15 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "ratectrl_rtc.h"
-#include "vp8_ratectrl.h"
+#include "libvpx_vp8_rtc.h"
+#include "libvpx_vp8_ratectrl.h"
 #define LAYER_IDS_TO_IDX(sl, tl, num_tl) ((sl) * (num_tl) + (tl))
 
 #undef ERROR
 #define ERROR(str)                  \
   do {                              \
     fprintf(stderr, "%s \n", str);	    \
-    return STATUS_BRC_VP8_INVALID_PARAM; \
+    return LIBMEBO_STATUS_INVALID_PARAM; \
   } while (0)
 
 #define RANGE_CHECK(p, memb, lo, hi)                                     \
@@ -71,21 +71,11 @@ static const unsigned char inter_minq[VP8_QINDEX_RANGE] = {
   87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100
 };
 
-int vp8_reverse_trans(int x) {
-  int i;
-
-  for (i = 0; i < 64; ++i) {
-    if (q_trans[i] >= x) return i;
-  }
-
-  return 63;
-}
-
 LibMeboStatus
 brc_vp8_post_encode_update(BrcCodecEnginePtr engine_ptr, uint64_t encoded_frame_size) {
   VP8RateControlRTC *rtc = (VP8RateControlRTC *) engine_ptr;
   VP8_COMP *cpi_ = &rtc->cpi_;
-  vp8_rc_postencode_update(cpi_, encoded_frame_size);
+  libvpx_vp8_rc_postencode_update(cpi_, encoded_frame_size);
   return LIBMEBO_STATUS_SUCCESS;
 }
 
@@ -118,9 +108,9 @@ brc_vp8_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   //vp8_update_rate_correction_factors(cpi, 2);
   //int active_worst_qchanged = 0;
 
-  cm->frame_type = frame_params->frame_type;
+  cm->frame_type = (LIBMEBO_KEY_FRAME == frame_params->frame_type) ? VP8_KEY_FRAME : VP8_INTER_FRAME;
 
-  vp8_pick_frame_size (cpi_);
+  libvpx_vp8_pick_frame_size (cpi_);
 
   /* Reduce active_worst_allowed_q for CBR if our buffer is getting too full.
    * This has a knock on effect on active best quality as well.
@@ -205,9 +195,9 @@ brc_vp8_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   }
 
   /* Determine initial Q to try */
-  Q = vp8_regulate_q(cpi_, cpi_->this_frame_target);
+  Q = libvpx_vp8_regulate_q(cpi_, cpi_->this_frame_target);
 
-  vp8_compute_frame_size_bounds(cpi_, &frame_under_shoot_limit,
+  libvpx_vp8_compute_frame_size_bounds(cpi_, &frame_under_shoot_limit,
                                 &frame_over_shoot_limit);
 
   cm->base_qindex = Q;
@@ -221,7 +211,7 @@ brc_vp8_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   }
 
   if (cpi_->pass == 0) {
-      if (vp8_drop_encodedframe_overshoot(cpi_, Q))
+      if (libvpx_vp8_drop_encodedframe_overshoot(cpi_, Q))
         return LIBMEBO_STATUS_SUCCESS;
   }
 
@@ -336,7 +326,7 @@ brc_vp8_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerC
     cpi_->buffer_level = cpi_->bits_off_target;
   }
   /* Set up frame rate and related parameters rate control values. */
-  vp8_new_framerate(cpi_, cpi_->framerate);
+  libvpx_vp8_new_framerate(cpi_, cpi_->framerate);
 
   /* Set absolute upper and lower quality limits */
   cpi_->worst_quality = oxcf->worst_allowed_q;

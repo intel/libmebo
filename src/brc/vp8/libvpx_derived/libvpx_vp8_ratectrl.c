@@ -10,7 +10,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "vp8_ratectrl.h"
+#include "libvpx_vp8_ratectrl.h"
 
 #define MIN_BPB_FACTOR 0.01
 #define MAX_BPB_FACTOR 50
@@ -25,7 +25,7 @@
  * the assumption that bits per mb is inversely proportional to the
  * quantizer value.
  */
-const int vp8_bits_per_mb[2][VP8_QINDEX_RANGE] = {
+static const int vp8_bits_per_mb[2][VP8_QINDEX_RANGE] = {
   /* Intra case 450000/Qintra */
   {
       1125000, 900000, 750000, 642857, 562500, 500000, 450000, 450000, 409090,
@@ -78,7 +78,7 @@ static const int kf_boost_qadjustment[VP8_QINDEX_RANGE] = {
 
 /* #define GFQ_ADJUSTMENT (Q+100) */
 #define GFQ_ADJUSTMENT vp8_gf_boost_qadjustment[Q]
-const int vp8_gf_boost_qadjustment[VP8_QINDEX_RANGE] = {
+static const int vp8_gf_boost_qadjustment[VP8_QINDEX_RANGE] = {
   80,  82,  84,  86,  88,  90,  92,  94,  96,  97,  98,  99,  100, 101, 102,
   103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117,
   118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132,
@@ -154,8 +154,10 @@ static const unsigned int prior_key_frame_weight[KEY_FRAME_CONTEXT] = { 1, 2, 3,
 #define ROUND_POWER_OF_TWO(value, n) (((value) + (1 << ((n)-1))) >> (n))
 #define ROUND64_POWER_OF_TWO(value, n) (((value) + (1ULL << ((n)-1))) >> (n))
 
+static void vp8_adjust_key_frame_context(VP8_COMP *cpi);
+
 void
-vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
+libvpx_vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
 {
   VP8_COMMON *const cm = &cpi->common;
   int Q = cm->base_qindex;
@@ -165,7 +167,7 @@ vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
 
   //Fimxe: Add this field in cpi structure? in vp8 it is the code in encode routine
   //if (!active_worst_qchanged)
-  vp8_update_rate_correction_factors(cpi, 2);
+  libvpx_vp8_update_rate_correction_factors(cpi, 2);
 
   cpi->last_q[cm->frame_type] = cm->base_qindex;
 
@@ -262,7 +264,7 @@ vp8_rc_postencode_update (VP8_COMP *cpi, uint64_t size)
   }
 }
 
-void vp8_new_framerate(VP8_COMP *cpi, double framerate) {
+void libvpx_vp8_new_framerate(VP8_COMP *cpi, double framerate) {
   if (framerate < .1) framerate = 30;
 
   cpi->framerate = framerate;
@@ -853,7 +855,7 @@ static void calc_pframe_target_size(VP8_COMP *cpi) {
   cpi->per_frame_bandwidth = old_per_frame_bandwidth;
 }
 
-void vp8_update_rate_correction_factors(VP8_COMP *cpi, int damp_var) {
+void libvpx_vp8_update_rate_correction_factors(VP8_COMP *cpi, int damp_var) {
   int Q = cpi->common.base_qindex;
   int correction_factor = 100;
   double rate_correction_factor;
@@ -936,7 +938,7 @@ void vp8_update_rate_correction_factors(VP8_COMP *cpi, int damp_var) {
   }
 }
 
-int vp8_regulate_q(VP8_COMP *cpi, int target_bits_per_frame) {
+int libvpx_vp8_regulate_q(VP8_COMP *cpi, int target_bits_per_frame) {
   int Q = cpi->active_worst_quality;
   int i;
   int last_error = INT_MAX;
@@ -1042,7 +1044,7 @@ static int estimate_keyframe_frequency(VP8_COMP *cpi) {
   return av_key_frame_frequency;
 }
 
-void vp8_adjust_key_frame_context(VP8_COMP *cpi) {
+static void vp8_adjust_key_frame_context(VP8_COMP *cpi) {
   /* Do we have any key frame overspend to recover? */
   /* Two-pass overspend handled elsewhere. */
   if ((cpi->pass != 2) &&
@@ -1073,7 +1075,7 @@ void vp8_adjust_key_frame_context(VP8_COMP *cpi) {
   cpi->key_frame_count++;
 }
 
-void vp8_compute_frame_size_bounds(VP8_COMP *cpi, int *frame_under_shoot_limit,
+void libvpx_vp8_compute_frame_size_bounds(VP8_COMP *cpi, int *frame_under_shoot_limit,
                                    int *frame_over_shoot_limit) {
   const int64_t this_frame_target = cpi->this_frame_target;
   int64_t over_shoot_limit, under_shoot_limit;
@@ -1124,7 +1126,7 @@ void vp8_compute_frame_size_bounds(VP8_COMP *cpi, int *frame_under_shoot_limit,
 }
 
 /* return of 0 means drop frame */
-int vp8_pick_frame_size(VP8_COMP *cpi) {
+int libvpx_vp8_pick_frame_size(VP8_COMP *cpi) {
   VP8_COMMON *cm = &cpi->common;
 
   if (cm->frame_type == VP8_KEY_FRAME) {
@@ -1149,7 +1151,7 @@ int vp8_pick_frame_size(VP8_COMP *cpi) {
 // (i.e., halfway during the encoding of the frame) to save cycles.
 //
 // LibMebo: We are netither using screen_content_mode nor allowing drop frames
-int vp8_drop_encodedframe_overshoot(VP8_COMP *cpi, int Q) {
+int libvpx_vp8_drop_encodedframe_overshoot(VP8_COMP *cpi, int Q) {
   cpi->frames_since_last_drop_overshoot++;
   return 0;
 }

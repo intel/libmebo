@@ -10,13 +10,13 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "ratectrl_rtc.h"
+#include "libvpx_vp9_rtc.h"
 
 #undef ERROR
 #define ERROR(str)                  \
   do {                              \
     fprintf(stderr, "%s \n", str);	    \
-    return STATUS_BRC_VP9_INVALID_PARAM; \
+    return LIBMEBO_STATUS_INVALID_PARAM; \
   } while (0)
 
 #define RANGE_CHECK(p, memb, lo, hi)                                     \
@@ -46,7 +46,7 @@ LibMeboStatus
 brc_vp9_post_encode_update(BrcCodecEnginePtr engine_ptr, uint64_t encoded_frame_size) {
   VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   VP9_COMP *cpi_ = &rtc->cpi_;
-  vp9_rc_postencode_update(cpi_, encoded_frame_size);
+  brc_libvpx_vp9_rc_postencode_update(cpi_, encoded_frame_size);
 
   if (cpi_->svc.number_spatial_layers > 1 ||
       cpi_->svc.number_temporal_layers > 1)
@@ -70,7 +70,7 @@ brc_vp9_get_loop_filter_level(BrcCodecEnginePtr engine_ptr, int *filter_level) {
   VP9RateControlRTC *rtc = (VP9RateControlRTC *) engine_ptr;
   VP9_COMP *cpi_ = &rtc->cpi_;
   struct loopfilter *const lf = &cpi_->common.lf;
-  vp9_pick_filter_level(cpi_, LPF_PICK_FROM_Q);
+  brc_vp9_pick_filter_level(cpi_, LPF_PICK_FROM_Q);
   *filter_level = lf->filter_level;
   return LIBMEBO_STATUS_SUCCESS;
 }
@@ -95,9 +95,10 @@ brc_vp9_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
     cm->width = width;
     cm->height = height;
   }
-  vp9_set_mb_mi(cm, cm->width, cm->height);
+  brc_libvpx_vp9_set_mb_mi(cm, cm->width, cm->height);
 
-  cm->frame_type = frame_params->frame_type;
+  //Fixme: Use common frame_type across the codebase
+  cm->frame_type = (FRAME_TYPE)frame_params->frame_type;
   cpi_->refresh_golden_frame = (cm->frame_type == KEY_FRAME) ? 1 : 0;
 
   cpi_->sf.use_nonrd_pick_mode = 1;
@@ -105,25 +106,25 @@ brc_vp9_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   if (cpi_->svc.number_spatial_layers == 1 &&
       cpi_->svc.number_temporal_layers == 1) {
     int target;
-    if (frame_is_intra_only(cm)) {
-      target = vp9_calc_iframe_target_size_one_pass_cbr(cpi_);
+    if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
+      target = brc_libvpx_vp9_calc_iframe_target_size_one_pass_cbr(cpi_);
     }
     else {
-      target = vp9_calc_pframe_target_size_one_pass_cbr(cpi_);
+      target = brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(cpi_);
     }
-    vp9_rc_set_frame_target(cpi_, target);
-    update_buffer_level_preencode(cpi_);
+    brc_libvpx_vp9_rc_set_frame_target(cpi_, target);
+    brc_libvpx_update_buffer_level_preencode(cpi_);
   } else {
     vp9_update_temporal_layer_framerate(cpi_);
     //Clarify: seems to be a dead code in libvpx
     // vp9_update_spatial_layer_framerate (cpi_, 30);
     vp9_restore_layer_context(cpi_);
-    vp9_rc_get_svc_params(cpi_);
+    brc_libvpx_vp9_rc_get_svc_params(cpi_);
   }
 
   int bottom_index, top_index;
   cpi_->common.base_qindex =
-      vp9_rc_pick_q_and_bounds(cpi_, &bottom_index, &top_index);
+      brc_libvpx_vp9_rc_pick_q_and_bounds(cpi_, &bottom_index, &top_index);
   return LIBMEBO_STATUS_SUCCESS;
 }
 
@@ -145,8 +146,8 @@ brc_vp9_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerC
     oxcf->init_framerate = 30;
   else
     oxcf->init_framerate = rc_cfg->framerate;
-  oxcf->worst_allowed_q = vp9_quantizer_to_qindex(rc_cfg->max_quantizer);
-  oxcf->best_allowed_q = vp9_quantizer_to_qindex(rc_cfg->min_quantizer);
+  oxcf->worst_allowed_q = brc_libvpx_vp9_quantizer_to_qindex(rc_cfg->max_quantizer);
+  oxcf->best_allowed_q = brc_libvpx_vp9_quantizer_to_qindex(rc_cfg->min_quantizer);
   rc->worst_quality = oxcf->worst_allowed_q;
   rc->best_quality = oxcf->best_allowed_q;
   oxcf->target_bandwidth = 1000 * rc_cfg->target_bandwidth;
@@ -180,16 +181,16 @@ brc_vp9_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerC
       oxcf->layer_target_bitrate[layer] =
           1000 * rc_cfg->layer_target_bitrate[layer];
       lrc->worst_quality =
-          vp9_quantizer_to_qindex(rc_cfg->max_quantizers[layer]);
-      lrc->best_quality = vp9_quantizer_to_qindex(rc_cfg->min_quantizers[layer]);
+          brc_libvpx_vp9_quantizer_to_qindex(rc_cfg->max_quantizers[layer]);
+      lrc->best_quality = brc_libvpx_vp9_quantizer_to_qindex(rc_cfg->min_quantizers[layer]);
       lc->scaling_factor_num = rc_cfg->scaling_factor_num[sl];
       lc->scaling_factor_den = rc_cfg->scaling_factor_den[sl];
       oxcf->ts_rate_decimator[tl] = rc_cfg->ts_rate_decimator[tl];
     }
   }
 
-  vp9_set_rc_buffer_sizes(rc, &cpi_->oxcf);
-  vp9_new_framerate(cpi_, cpi_->framerate);
+  brc_libvpx_vp9_set_rc_buffer_sizes(rc, &cpi_->oxcf);
+  brc_libvpx_vp9_new_framerate(cpi_, cpi_->framerate);
 
   if (cpi_->svc.number_temporal_layers > 1 ||
       cpi_->svc.number_spatial_layers > 1) {
@@ -199,7 +200,7 @@ brc_vp9_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerC
                                            (int)cpi_->oxcf.target_bandwidth);
   }
 
-  vp9_check_reset_rc_flag(cpi_);
+  brc_libvpx_vp9_check_reset_rc_flag(cpi_);
   return LIBMEBO_STATUS_SUCCESS;
 }
 
@@ -236,9 +237,9 @@ brc_init_rate_control(VP9RateControlRTC *rtc, LibMeboRateControllerConfig *rc_cf
                       : 0;
   rc->rc_1_frame = 0;
   rc->rc_2_frame = 0;
-  //vp9_change_config (cpi_, oxcf);
-  vp9_rc_init_minq_luts();
-  vp9_rc_init(oxcf, 0, rc);
+  //brc_libvpx_vp9_change_config (cpi_, oxcf);
+  brc_libvpx_vp9_rc_init_minq_luts();
+  brc_libvpx_vp9_rc_init(oxcf, 0, rc);
 
   cpi_->sf.use_nonrd_pick_mode = 1;
   cm->current_video_frame = 0;

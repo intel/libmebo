@@ -12,9 +12,8 @@
 #ifndef AOM_AV1_COMMON_H_
 #define AOM_AV1_COMMON_H_
 
-#include "av1_ratectrl.h"
-#include "av1_svc_layercontext.h"
-//#include "av1_picklpf.h"
+#include "aom_av1_ratectrl.h"
+#include "aom_av1_svc_layercontext.h"
 
 #define INVALID_IDX (-1)  // Invalid buffer index.
 

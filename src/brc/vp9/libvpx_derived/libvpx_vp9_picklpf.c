@@ -9,8 +9,8 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#include "vp9_picklpf.h"
-#include "vp9_common.h"
+#include "libvpx_vp9_picklpf.h"
+#include "libvpx_vp9_common.h"
 
 #define ROUND_POWER_OF_TWO(value, n) (((value) + (1 << ((n)-1))) >> (n))
 #define ROUND64_POWER_OF_TWO(value, n) (((value) + (1ULL << ((n)-1))) >> (n))
@@ -31,7 +31,7 @@ clamp (int value, int low, int high)
   return value < low ? low : (value > high ? high : value);
 }
 
-void vp9_pick_filter_level(VP9_COMP *cpi,
+void brc_vp9_pick_filter_level(VP9_COMP *cpi,
                            LPF_PICK_METHOD method) {
   VP9_COMMON *const cm = &cpi->common;
   struct loopfilter *const lf = &cm->lf;
@@ -41,7 +41,7 @@ void vp9_pick_filter_level(VP9_COMP *cpi,
   } else if (method >= LPF_PICK_FROM_Q) {
     const int min_filter_level = 0;
     const int max_filter_level = get_max_filter_level(cpi);
-    const int q = vp9_ac_quant(cm->base_qindex, 0, cm->bit_depth);
+    const int q = brc_libvpx_vp9_ac_quant(cm->base_qindex, 0, cm->bit_depth);
 #if 0
 // These values were determined by linear fitting the result of the
 // searched level, filt_guess = q * 0.316206 + 3.87252
