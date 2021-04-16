@@ -1,1 +1,4 @@
+option('with_vp8', type : 'combo', choices : ['yes', 'no'], value : 'yes')
+option('with_vp9', type : 'combo', choices : ['yes', 'no'], value : 'yes')
+option('with_av1', type : 'combo', choices : ['yes', 'no'], value : 'yes')
 option('enable_docs', type : 'boolean', value : false)

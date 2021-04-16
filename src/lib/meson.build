@@ -10,13 +10,14 @@ install_headers ('libmebo.h', subdir : 'libmebo')
 
 libmebo  = shared_library('mebo',
   libmebo_sources,
-  include_directories: [libbrcinc],
+  c_args : libmebo_args,
+  include_directories: [configinc, libbrcinc],
   dependencies: [libbrc_dep],
   install : true,
   install_dir : libmebo_install_dir,)
 
 libmebo_dep_internal = declare_dependency(link_with: libmebo,
-  include_directories : [libbrcinc],
+  include_directories : [configinc, libbrcinc],
   dependencies : [libbrc_dep])
 
 pkgconfig.generate(

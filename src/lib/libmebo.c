@@ -16,10 +16,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_LIBMEBO_CONFIG_H
+# include "libmebo_config.h"
+#endif
+
 #include "libmebo.h"
+#if LIBMEBO_ENABLE_VP9
 #include "brc/vp9/libvpx_derived/libvpx_vp9_rtc.h"
+#endif
+#if LIBMEBO_ENABLE_VP8
 #include "brc/vp8/libvpx_derived/libvpx_vp8_rtc.h"
+#endif
+#if LIBMEBO_ENABLE_AV1
 #include "brc/av1/aom_derived/aom_av1_rtc.h"
+#endif
 
 #define GET_LAYER_INDEX(s_layer, t_layer, num_temporal_layers) \
 	((s_layer) * (num_temporal_layers) + (t_layer))
@@ -73,6 +83,7 @@ static const brc_algo_map algo_impl_map[] = {
     LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8,
     "VP8 BRC algorithm derived from libvpx",
     {
+#if LIBMEBO_ENABLE_VP8
       brc_vp8_rate_control_init,
       brc_vp8_update_rate_control,
       brc_vp8_compute_qp,
@@ -80,6 +91,9 @@ static const brc_algo_map algo_impl_map[] = {
       brc_vp8_get_loop_filter_level,
       brc_vp8_post_encode_update,
       brc_vp8_rate_control_free,
+#else
+      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+#endif
     },
   },
   {
@@ -87,6 +101,7 @@ static const brc_algo_map algo_impl_map[] = {
     LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9,
     "VP9 BRC algorithm derivded from libvpx",
     {
+#if LIBMEBO_ENABLE_VP9
       brc_vp9_rate_control_init,
       brc_vp9_update_rate_control,
       brc_vp9_compute_qp,
@@ -94,6 +109,9 @@ static const brc_algo_map algo_impl_map[] = {
       brc_vp9_get_loop_filter_level,
       brc_vp9_post_encode_update,
       brc_vp9_rate_control_free,
+#else
+      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+#endif
     },
   },
   {
@@ -101,6 +119,7 @@ static const brc_algo_map algo_impl_map[] = {
     LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1,
     "AV1 BRC algorithm dervied from AOM",
     {
+#if LIBMEBO_ENABLE_AV1
       brc_av1_rate_control_init,
       brc_av1_update_rate_control,
       brc_av1_compute_qp,
@@ -108,6 +127,9 @@ static const brc_algo_map algo_impl_map[] = {
       brc_av1_get_loop_filter_level,
       brc_av1_post_encode_update,
       brc_av1_rate_control_free,
+#else
+      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+#endif
     },
   },
   {
