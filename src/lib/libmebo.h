@@ -205,22 +205,26 @@ typedef struct _LibMeboRateControllerConfig {
   int height;
 
   /**
-   * \brief Maximum (Worst Quality) Quantizer
+   * \brief Maximum (Worst Quality) Quantizer: Range: 0 - 63
    *
    * The quantizer is the most direct control over the quality of the
-   * encoded image. The range of valid values for the quantizer is codec
-   * specific. Consult the documentation for the codec to determine the
-   * values to use.
+   * encoded image. The actual range of the valid values for the quantizer
+   * is codec specific. Consult the documentation for the codec to determine
+   * the values to use(eg: VP8: 0-127, VP9: 0-255).
+   *
+   * LibMebo scales the max_quantizer between the codec specific limits.
    */
   int max_quantizer;
 
   /*
-   * \brief Minimum (Best Quality) Quantizer
+   * \brief Minimum (Best Quality) Quantizer: Range: 0 - 63
    *
    * The quantizer is the most direct control over the quality of the
-   * encoded image. The range of valid values for the quantizer is codec
-   * specific. Consult the documentation for the codec to determine the
-   * values to use.
+   * encoded image. The actual ange of valid values for the quantizer
+   * is codec specific. Consult the documentation for the codec to determine
+   * the values to use (eg: VP8: 0-127, VP9: 0-255).
+   *
+   * LibMebo scales the min_quantizer between the codec specific limits.
    */
   int min_quantizer;
 
@@ -258,32 +262,22 @@ typedef struct _LibMeboRateControllerConfig {
   /**
    * \brief Rate control adaptation undershoot control
    *
-   * VP8: Expressed as a percentage of the target bitrate,
-   * controls the maximum allowed adaptation speed of the codec.
-   * This factor controls the maximum amount of bits that can
-   * be subtracted from the target bitrate in order to compensate
-   * for prior overshoot.
-   * VP9: Expressed as a percentage of the target bitrate, a threshold
+   * Expressed as a percentage of the target bitrate, a threshold
    * undershoot level (current rate vs target) beyond which more aggressive
    * corrective measures are taken.
    *
-   * Valid values in the range VP8:0-1000 VP9: 0-100.
+   * Valid values in the range: 0-100
    */
   int undershoot_pct;
 
   /**
    * \brief Rate control adaptation overshoot control
    *
-   * VP8: Expressed as a percentage of the target bitrate,
-   * controls the maximum allowed adaptation speed of the codec.
-   * This factor controls the maximum amount of bits that can
-   * be added to the target bitrate in order to compensate for
-   * prior undershoot.
-   * VP9: Expressed as a percentage of the target bitrate, a threshold
+   * Expressed as a percentage of the target bitrate, a threshold
    * overshoot level (current rate vs target) beyond which more aggressive
    * corrective measures are taken.
    *
-   * Valid values in the range VP8:0-1000 VP9: 0-100.
+   * Valid values in the range: 0-100
    */
   int overshoot_pct;
 
