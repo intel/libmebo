@@ -19,7 +19,7 @@ Pros:
 Cons:
 - Middleware is restricted by the limited number of algorithms implemented by each vendor on their hardware.
 - More often than not, Bit Rate quality issues require fixes in hardware, firmware or media-kernels
-- For codecs like VP8, VP9 & AV1, Advanced encoding models like Spatial & Temporal encodings are required to be implemented in middleware because of the limitations of the driver to providebitrate control over the above-mentioned reference picture models.
+- For codecs like VP8, VP9 & AV1, Advanced encoding models like Spatial & Temporal encodings are required to be implemented in middleware because of the limitations of the driver to provide bitrate control over the above-mentioned reference picture models.
 - Even though drivers come up with CBR mode support for SVC models, there are other constraints like the number of temporal and spatial layers it can support.
 
 ### LibMebo Pros & Cons
@@ -46,6 +46,10 @@ loc change.
 
 ## POC for custom bitrate algrorithm injection into the existing hardware media stacks
 
-Gstreamer: VP9 Encode: Add software based BitRate control: https://cgit.freedesktop.org/~sree/gstreamer-vaapi/commit/?h=VP9_SVC_and_SoftwareBRC&id=355f16bdb32965425b274aa082c1334b0edd5992
+Gstreamer: https://cgit.freedesktop.org/~sree/gstreamer-vaapi/log/?h=libmebo
 
 ChromeOS/Chromium: https://chromium-review.googlesource.com/c/chromium/src/+/2099522
+Chromium-LibMebo:
+  https://bugs.chromium.org/p/chromium/issues/detail?id=1203469
+  https://chromium-review.googlesource.com/c/chromium/src/+/2852068
+  https://chromium-review.googlesource.com/c/chromium/src/+/2852443

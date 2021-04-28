@@ -138,7 +138,6 @@ typedef enum {
   LIBMEBO_STATUS_UNKNOWN,
 } LibMeboStatus;
 
-
 /** 
  * Rate Control Modes
  */

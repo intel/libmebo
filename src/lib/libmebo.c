@@ -377,7 +377,6 @@ libmebo_rate_controller_free (LibMeboRateController *rc)
   rc = NULL;
 }
 
-
 /**
  * \brief libmebo_rate_controller_new:
  *
