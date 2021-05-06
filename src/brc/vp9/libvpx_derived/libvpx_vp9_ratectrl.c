@@ -280,8 +280,6 @@ static int arfgf_high_motion_minq_12[QINDEX_RANGE];
 static int inter_minq_12[QINDEX_RANGE];
 static int rtc_minq_12[QINDEX_RANGE];
 
-static int gf_high = 2000;
-static int gf_low = 400;
 static int kf_high = 4800;
 static int kf_low = 300;
 
@@ -660,8 +658,6 @@ void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL
 static int adjust_q_cbr(const VP9_COMP *cpi, int q) {
   // This makes sure q is between oscillating Qs to prevent resonance.
   if (!cpi->rc.reset_high_source_sad &&
-      (!cpi->oxcf.gf_cbr_boost_pct ||
-       !(cpi->refresh_alt_ref_frame || cpi->refresh_golden_frame)) &&
       (cpi->rc.rc_1_frame * cpi->rc.rc_2_frame == -1) &&
       cpi->rc.q_1_frame != cpi->rc.q_2_frame) {
     int qclamp = clamp(q, VPXMIN(cpi->rc.q_1_frame, cpi->rc.q_2_frame),
@@ -840,19 +836,6 @@ static int get_kf_active_quality(const RATE_CONTROL *const rc, int q,
                             kf_low_motion_minq, kf_high_motion_minq);
 }
 
-static int get_gf_active_quality(const VP9_COMP *const cpi, int q,
-                                 vpx_bit_depth_t bit_depth) {
-  const RATE_CONTROL *const rc = &cpi->rc;
-
-  int *arfgf_low_motion_minq;
-  int *arfgf_high_motion_minq;
-  const int gfu_boost = rc->gfu_boost;
-  ASSIGN_MINQ_TABLE(bit_depth, arfgf_low_motion_minq);
-  ASSIGN_MINQ_TABLE(bit_depth, arfgf_high_motion_minq);
-  return get_active_quality(q, gfu_boost, gf_low, gf_high,
-                            arfgf_low_motion_minq, arfgf_high_motion_minq);
-}
-
 // Adjust active_worst_quality level based on buffer level.
 static int calc_active_worst_quality_one_pass_cbr(const VP9_COMP *cpi) {
   // Adjust active_worst_quality: If buffer is above the optimal/target level,
@@ -966,19 +949,6 @@ static int rc_pick_q_and_bounds_one_pass_cbr(const VP9_COMP *cpi,
       active_best_quality +=
           vp9_compute_qdelta(rc, q_val, q_val * q_adj_factor, cm->bit_depth);
     }
-  } else if (!rc->is_src_frame_alt_ref && !cpi->use_svc &&
-             cpi->oxcf.gf_cbr_boost_pct &&
-             (cpi->refresh_golden_frame || cpi->refresh_alt_ref_frame)) {
-    // Use the lower of active_worst_quality and recent
-    // average Q as basis for GF/ARF best Q limit unless last frame was
-    // a key frame.
-    if (rc->frames_since_key > 1 &&
-        rc->avg_frame_qindex[INTER_FRAME] < active_worst_quality) {
-      q = rc->avg_frame_qindex[INTER_FRAME];
-    } else {
-      q = active_worst_quality;
-    }
-    active_best_quality = get_gf_active_quality(cpi, q, cm->bit_depth);
   } else {
     // Use the lower of active_worst_quality and recent/average Q.
     if (cm->current_video_frame > 1) {
@@ -1292,17 +1262,7 @@ int brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi) {
       VPXMAX(rc->avg_frame_bandwidth >> 4, FRAME_OVERHEAD_BITS);
   int target;
 
-  if (oxcf->gf_cbr_boost_pct) {
-    const int af_ratio_pct = oxcf->gf_cbr_boost_pct + 100;
-    target = cpi->refresh_golden_frame
-                 ? (rc->avg_frame_bandwidth * rc->baseline_gf_interval *
-                    af_ratio_pct) /
-                       (rc->baseline_gf_interval * 100 + af_ratio_pct - 100)
-                 : (rc->avg_frame_bandwidth * rc->baseline_gf_interval * 100) /
-                       (rc->baseline_gf_interval * 100 + af_ratio_pct - 100);
-  } else {
-    target = rc->avg_frame_bandwidth;
-  }
+  target = rc->avg_frame_bandwidth;
 
   if (brc_libvpx_is_one_pass_cbr_svc(cpi)) {
     // Note that for layers, avg_frame_bandwidth is the cumulative

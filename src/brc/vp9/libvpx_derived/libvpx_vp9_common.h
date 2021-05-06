@@ -35,8 +35,6 @@ typedef struct VP9EncoderConfig {
 
   double init_framerate;         // set to passed in framerate
 
-  // percent of rate boost for golden frame in CBR mode.
-  unsigned int gf_cbr_boost_pct;
   MODE mode;
   int pass;
 
