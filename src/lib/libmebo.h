@@ -281,12 +281,38 @@ typedef struct _LibMeboRateControllerConfig {
   int overshoot_pct;
 
   /**
-   * \brief  maximum allowed bitrate for any intra frame in % of bitrate target
+   * \brief Codec control attribute to set max data rate for Intra frames.
+   *
+   * This value controls additional clamping on the maximum size of a
+   * keyframe. It is expressed as a percentage of the average
+   * per-frame bitrate, with the special (and default) value 0 meaning
+   * unlimited, or no additional clamping beyond the codec's built-in
+   * algorithm.
+   *
+   * For example, to allocate no more than 4.5 frames worth of bitrate
+   * to a keyframe, set this to 450.
+   *
+   * It is not guaranteed that all brc algorithms will support this
+   * feature. The libmebo_rate_controller_init() is responsible for
+   * the codec specific parameter validation.
+   *
    */
   int max_intra_bitrate_pct;
  
-  /**
-   * \brief  maximum allowed bitrate for any inter frame in % of bitrate target
+  /*\brief Codec control attribute to set max data rate for Inter frames.
+   *
+   * This value controls additional clamping on the maximum size of an
+   * inter frame. It is expressed as a percentage of the average
+   * per-frame bitrate, with the special (and default) value 0 meaning
+   * unlimited, or no additional clamping beyond the codec's built-in
+   * algorithm.
+   *
+   * For example, to allow no more than 4.5 frames worth of bitrate
+   * to an inter frame, set this to 450.
+   *
+   * It is not guaranteed that all brc algorithms will support this
+   * feature. The libmebo_rate_controller_init() is responsible for
+   * the codec specific parameter validation.
    */
   int max_inter_bitrate_pct;
 

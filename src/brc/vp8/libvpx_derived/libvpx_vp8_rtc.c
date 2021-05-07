@@ -443,6 +443,7 @@ brc_vp8_validate (LibMeboRateControllerConfig *cfg)
   RANGE_CHECK_HI(cfg, overshoot_pct, 1000);
   RANGE_CHECK(cfg, ss_number_layers, 1, 1);
   RANGE_CHECK(cfg, ts_number_layers, 1, 1);
+  RANGE_CHECK(cfg, max_inter_bitrate_pct, 0, 0);
 
   if (cfg->ss_number_layers * cfg->ts_number_layers > VP8_MAX_LAYERS)
     ERROR("ss_number_layers * ts_number_layers is out of range");
