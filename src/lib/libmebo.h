@@ -265,6 +265,10 @@ typedef struct _LibMeboRateControllerConfig {
    * undershoot level (current rate vs target) beyond which more aggressive
    * corrective measures are taken.
    *
+   * This factor controls the maximum amount of bits that can
+   * be subtracted from the target bitrate in order to compensate
+   * for prior overshoot.
+   *
    * Valid values in the range: 0-100
    */
   int undershoot_pct;
@@ -275,6 +279,10 @@ typedef struct _LibMeboRateControllerConfig {
    * Expressed as a percentage of the target bitrate, a threshold
    * overshoot level (current rate vs target) beyond which more aggressive
    * corrective measures are taken.
+   *
+   * This factor controls the maximum amount of bits that can
+   * be added to the target bitrate in order to compensate for
+   * prior undershoot.
    *
    * Valid values in the range: 0-100
    */
