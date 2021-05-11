@@ -512,10 +512,6 @@ int brc_libvpx_is_one_pass_cbr_svc(const struct VP9_COMP *const cpi);
 // The only exceptions are vp9_rc_drop_frame() and
 // vp9_rc_update_rate_correction_factors() functions.
 
-// Functions to set parameters for encoding before the actual
-// encode_frame_to_data_rate() function.
-void brc_libvpx_vp9_rc_get_one_pass_cbr_params(struct VP9_COMP *cpi);
-
 void brc_libvpx_vp9_rc_get_svc_params(struct VP9_COMP *cpi);
 
 // Post encode update of the rate control parameters based

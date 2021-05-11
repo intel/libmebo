@@ -1377,42 +1377,6 @@ void brc_libvpx_vp9_rc_get_svc_params(VP9_COMP *cpi) {
   if (cm->show_frame) update_buffer_level_svc_preencode(cpi);
 }
 
-void brc_libvpx_vp9_rc_get_one_pass_cbr_params(VP9_COMP *cpi) {
-  VP9_COMMON *const cm = &cpi->common;
-  RATE_CONTROL *const rc = &cpi->rc;
-  int target;
-#if 0
-  if ((cm->current_video_frame == 0) || (cpi->frame_flags & FRAMEFLAGS_KEY) ||
-      (cpi->oxcf.auto_key && rc->frames_to_key == 0)) {
-    cm->frame_type = KEY_FRAME;
-    rc->frames_to_key = cpi->oxcf.key_freq;
-    rc->kf_boost = DEFAULT_KF_BOOST;
-    rc->source_alt_ref_active = 0;
-  } else {
-    cm->frame_type = INTER_FRAME;
-  }
-#endif
-  if (rc->frames_till_gf_update_due == 0) {
-      rc->baseline_gf_interval =
-          (rc->min_gf_interval + rc->max_gf_interval) / 2;
-    rc->frames_till_gf_update_due = rc->baseline_gf_interval;
-    // NOTE: frames_till_gf_update_due must be <= frames_to_key.
-    if (rc->frames_till_gf_update_due > rc->frames_to_key)
-      rc->frames_till_gf_update_due = rc->frames_to_key;
-    rc->gfu_boost = DEFAULT_GF_BOOST;
-  }
-
-  if (brc_libvpx_vp9_frame_is_intra_only(cm)) {
-    target = brc_libvpx_vp9_calc_iframe_target_size_one_pass_cbr(cpi);
-  }
-  else {
-    target = brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(cpi);
-  }
-  brc_libvpx_vp9_rc_set_frame_target(cpi, target);
-
-  if (cm->show_frame) brc_libvpx_update_buffer_level_preencode(cpi);
-}
-
 static int vp9_compute_qdelta(const RATE_CONTROL *rc, double qstart, double qtarget,
                        vpx_bit_depth_t bit_depth) {
   int start_index = rc->worst_quality;
