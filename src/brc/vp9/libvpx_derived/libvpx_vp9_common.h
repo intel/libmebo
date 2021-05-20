@@ -138,7 +138,6 @@ typedef struct VP9_COMP {
 
   int refresh_last_frame;
   int refresh_golden_frame;
-  int refresh_alt_ref_frame;
 
   // If the last frame is dropped, we don't copy partition.
   uint8_t last_frame_dropped;

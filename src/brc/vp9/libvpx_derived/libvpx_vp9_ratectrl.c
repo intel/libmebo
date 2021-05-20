@@ -192,13 +192,6 @@ int brc_libvpx_is_one_pass_cbr_svc(const struct VP9_COMP *const cpi) {
   return (cpi->use_svc && cpi->oxcf.pass == 0);
 }
 
-#define MIN_LOOKAHEAD_FOR_ARFS 4
-static inline int is_altref_enabled(const VP9_COMP *const cpi) {
-  return !(cpi->oxcf.mode == REALTIME && cpi->oxcf.rc_mode == VPX_CBR) &&
-         cpi->oxcf.lag_in_frames >= MIN_LOOKAHEAD_FOR_ARFS &&
-         cpi->oxcf.enable_auto_arf;
-}
-
 int vp9_get_level_index(VP9_LEVEL level) {
   int i;
   for (i = 0; i < VP9_LEVELS; ++i) {
@@ -620,8 +613,6 @@ void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL
   rc->frames_since_key = 8;  // Sensible default for first frame.
   rc->this_key_frame_forced = 0;
   rc->next_key_frame_forced = 0;
-  rc->source_alt_ref_pending = 0;
-  rc->source_alt_ref_active = 0;
 
   rc->frames_till_gf_update_due = 0;
   rc->ni_av_qi = oxcf->worst_allowed_q;
@@ -652,7 +643,6 @@ void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL
   rc->arf_increase_active_best_quality = 0;
   rc->preserve_arf_as_gld = 0;
   rc->preserve_next_arf_as_gld = 0;
-  rc->show_arf_as_gld = 0;
 }
 
 static int adjust_q_cbr(const VP9_COMP *cpi, int q) {
@@ -1029,18 +1019,6 @@ void brc_libvpx_vp9_rc_set_frame_target(VP9_COMP *cpi, int target) {
                                (cm->width * cm->height));
 }
 
-static void update_alt_ref_frame_stats(VP9_COMP *cpi) {
-  // this frame refreshes means next frames don't unless specified by user
-  RATE_CONTROL *const rc = &cpi->rc;
-  rc->frames_since_golden = 0;
-
-  // Mark the alt ref as done (setting to 0 means no further alt refs pending).
-  rc->source_alt_ref_pending = 0;
-
-  // Set the alternate reference frame active flag
-  rc->source_alt_ref_active = 1;
-}
-
 static void update_golden_frame_stats(VP9_COMP *cpi) {
   RATE_CONTROL *const rc = &cpi->rc;
 
@@ -1049,27 +1027,14 @@ static void update_golden_frame_stats(VP9_COMP *cpi) {
     // this frame refreshes means next frames don't unless specified by user
     rc->frames_since_golden = 0;
 
-    if (!rc->source_alt_ref_pending) {
-      rc->source_alt_ref_active = 0;
-    }
-
     // Decrement count down till next gf
     if (rc->frames_till_gf_update_due > 0) rc->frames_till_gf_update_due--;
 
-  } else if (!cpi->refresh_alt_ref_frame) {
+  } else {
     // Decrement count down till next gf
     if (rc->frames_till_gf_update_due > 0) rc->frames_till_gf_update_due--;
 
     rc->frames_since_golden++;
-
-    if (rc->show_arf_as_gld) {
-      rc->frames_since_golden = 0;
-      // If we are not using alt ref in the up and coming group clear the arf
-      // active flag. In multi arf group case, if the index is not 0 then
-      // we are overlaying a mid group arf so should not reset the flag.
-      if (!rc->source_alt_ref_pending /*&& (cpi->twopass.gf_group.index == 0)*/)
-        rc->source_alt_ref_active = 0;
-    }
   }
 }
 
@@ -1153,12 +1118,6 @@ void brc_libvpx_vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
   rc->total_target_vs_actual = rc->total_actual_bits - rc->total_target_bits;
 
   if (!cpi->use_svc) {
-	  //Note: is_altreaf_enabled??
-    if (is_altref_enabled(cpi) && cpi->refresh_alt_ref_frame &&
-        (!brc_libvpx_vp9_frame_is_intra_only(cm)))
-      // Update the alternate reference frame stats as appropriate.
-      update_alt_ref_frame_stats(cpi);
-    else
       // Update the Golden frame stats as appropriate.
       update_golden_frame_stats(cpi);
   }
@@ -1339,7 +1298,6 @@ void brc_libvpx_vp9_rc_get_svc_params(VP9_COMP *cpi) {
   // indicates key, superframe counter hits key frequency, or (non-intra) sync
   // flag is set for spatial layer 0.
   if (cm->frame_type == KEY_FRAME) {
-    rc->source_alt_ref_active = 0;
     if (brc_libvpx_is_one_pass_cbr_svc(cpi)) {
       if (cm->current_video_frame > 0) vp9_svc_reset_temporal_layers(cpi, 1);
       layer = LAYER_IDS_TO_IDX(svc->spatial_layer_id, svc->temporal_layer_id,
