@@ -116,8 +116,6 @@ brc_vp9_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
     brc_libvpx_update_buffer_level_preencode(cpi_);
   } else {
     vp9_update_temporal_layer_framerate(cpi_);
-    //Clarify: seems to be a dead code in libvpx
-    // vp9_update_spatial_layer_framerate (cpi_, 30);
     vp9_restore_layer_context(cpi_);
     brc_libvpx_vp9_rc_get_svc_params(cpi_);
   }
@@ -170,7 +168,6 @@ brc_vp9_update_rate_control(BrcCodecEnginePtr engine_ptr, LibMeboRateControllerC
   cpi_->svc.number_temporal_layers = rc_cfg->ts_number_layers;
 
   cpi_->refresh_golden_frame = 0;
-  cpi_->refresh_last_frame = 1;
 
   for (int sl = 0; sl < (cpi_->svc.number_spatial_layers % VPX_SS_MAX_LAYERS); ++sl) {
     for (int tl = 0; tl < (cpi_->svc.number_temporal_layers % VPX_TS_MAX_LAYERS); ++tl) {

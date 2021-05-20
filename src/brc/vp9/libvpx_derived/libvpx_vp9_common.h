@@ -42,11 +42,6 @@ typedef struct VP9EncoderConfig {
   int best_allowed_q;
   AQ_MODE aq_mode;  // Adaptive Quantization mode
 
-  // Internal frame size scaling.
-  RESIZE_TYPE resize_mode;
-  int scaled_frame_width;
-  int scaled_frame_height;
-
   // Key Framing Operations
   int auto_key;  // autodetect cut scenes and set the keyframes
   int key_freq;  // maximum distance to key frame.
@@ -136,7 +131,6 @@ typedef struct VP9_COMP {
   LevelConstraint level_constraint;
   unsigned int target_level;
 
-  int refresh_last_frame;
   int refresh_golden_frame;
 
   // If the last frame is dropped, we don't copy partition.

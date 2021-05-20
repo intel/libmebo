@@ -326,11 +326,8 @@ void brc_libvpx_vp9_change_config(struct VP9_COMP *cpi, const VP9EncoderConfig *
   int last_h = cpi->oxcf.height;
 
   cpi->refresh_golden_frame = 0;
-  cpi->refresh_last_frame = 1;
 
   cpi->target_level = oxcf->target_level;
-  //vp9_set_level_constraint(&cpi->level_constraint,
-  //                     vp9_get_level_index(cpi->target_level));
 
   rc->baseline_gf_interval = (MIN_GF_INTERVAL + MAX_GF_INTERVAL) / 2;
 
@@ -596,11 +593,6 @@ void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL
   rc->avg_frame_low_motion = 0;
   rc->count_last_scene_change = 0;
   rc->af_ratio_onepass_vbr = 10;
-  rc->prev_avg_source_sad_lag = 0;
-  rc->high_source_sad = 0;
-  rc->reset_high_source_sad = 0;
-  rc->high_source_sad_lagindex = -1;
-  rc->high_num_blocks_with_motion = 0;
   rc->hybrid_intra_scene_change = 0;
   rc->re_encode_maxq_scene_change = 0;
   rc->alt_ref_gf_group = 0;
@@ -608,7 +600,6 @@ void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL
   rc->fac_active_worst_inter = 150;
   rc->fac_active_worst_gf = 100;
   rc->force_qpmin = 0;
-  for (i = 0; i < MAX_LAG_BUFFERS; ++i) rc->avg_source_sad[i] = 0;
   rc->frames_to_key = 0;
   rc->frames_since_key = 8;  // Sensible default for first frame.
   rc->this_key_frame_forced = 0;
@@ -647,8 +638,7 @@ void brc_libvpx_vp9_rc_init(const VP9EncoderConfig *oxcf, int pass, RATE_CONTROL
 
 static int adjust_q_cbr(const VP9_COMP *cpi, int q) {
   // This makes sure q is between oscillating Qs to prevent resonance.
-  if (!cpi->rc.reset_high_source_sad &&
-      (cpi->rc.rc_1_frame * cpi->rc.rc_2_frame == -1) &&
+  if ((cpi->rc.rc_1_frame * cpi->rc.rc_2_frame == -1) &&
       cpi->rc.q_1_frame != cpi->rc.q_2_frame) {
     int qclamp = clamp(q, VPXMIN(cpi->rc.q_1_frame, cpi->rc.q_2_frame),
                        VPXMAX(cpi->rc.q_1_frame, cpi->rc.q_2_frame));
@@ -673,7 +663,7 @@ static double get_rate_correction_factor(const VP9_COMP *cpi) {
   } else {
       rcf = rc->rate_correction_factors[INTER_NORMAL];
   }
-  rcf *= rcf_mult[rc->frame_size_selector % FRAME_SCALE_STEPS];
+  rcf *= rcf_mult[0];
   return fclamp(rcf, MIN_BPB_FACTOR, MAX_BPB_FACTOR);
 }
 
@@ -682,7 +672,7 @@ static void set_rate_correction_factor(VP9_COMP *cpi, double factor) {
   const VP9_COMMON *const cm = &cpi->common;
 
   // Normalize RCF to account for the size-dependent scaling factor.
-  factor /= rcf_mult[cpi->rc.frame_size_selector % FRAME_SCALE_STEPS];
+  factor /= rcf_mult[0];
 
   factor = fclamp(factor, MIN_BPB_FACTOR, MAX_BPB_FACTOR);
 
@@ -842,7 +832,7 @@ static int calc_active_worst_quality_one_pass_cbr(const VP9_COMP *cpi) {
   int active_worst_quality;
   int ambient_qp;
   unsigned int num_frames_weight_key = 5 * 1; //Note:one temporal layer
-  if (brc_libvpx_vp9_frame_is_intra_only(cm) || rc->reset_high_source_sad || rc->force_max_q)
+  if (brc_libvpx_vp9_frame_is_intra_only(cm) || rc->force_max_q)
     return rc->worst_quality;
   // For ambient_qp we use minimum of avg_frame_qindex[KEY_FRAME/INTER_FRAME]
   // for the first few frames following key frame. These are both initialized
@@ -1026,21 +1016,13 @@ static void update_golden_frame_stats(VP9_COMP *cpi) {
   if (cpi->refresh_golden_frame) {
     // this frame refreshes means next frames don't unless specified by user
     rc->frames_since_golden = 0;
-
-    // Decrement count down till next gf
-    if (rc->frames_till_gf_update_due > 0) rc->frames_till_gf_update_due--;
-
   } else {
-    // Decrement count down till next gf
-    if (rc->frames_till_gf_update_due > 0) rc->frames_till_gf_update_due--;
-
     rc->frames_since_golden++;
   }
 }
 
 void brc_libvpx_vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
   const VP9_COMMON *const cm = &cpi->common;
-  const VP9EncoderConfig *const oxcf = &cpi->oxcf;
   RATE_CONTROL *const rc = &cpi->rc;
   SVC *const svc = &cpi->svc;
   const int qindex = cm->base_qindex;
@@ -1122,93 +1104,15 @@ void brc_libvpx_vp9_rc_postencode_update(VP9_COMP *cpi, int64_t bytes_used) {
       update_golden_frame_stats(cpi);
   }
 
-  // If second (long term) temporal reference is used for SVC,
-  // update the golden frame counter, only for base temporal layer.
-  if (cpi->use_svc && svc->use_gf_temporal_ref_current_layer &&
-      svc->temporal_layer_id == 0) {
-    int i = 0;
-    if (cpi->refresh_golden_frame)
-      rc->frames_since_golden = 0;
-    else
-      rc->frames_since_golden++;
-    // Decrement count down till next gf
-    if (rc->frames_till_gf_update_due > 0) rc->frames_till_gf_update_due--;
-    // Update the frames_since_golden for all upper temporal layers.
-    for (i = 1; i < svc->number_temporal_layers; ++i) {
-      const int layer = LAYER_IDS_TO_IDX(svc->spatial_layer_id, i,
-                                         svc->number_temporal_layers);
-      LAYER_CONTEXT *const lc = &svc->layer_context[layer];
-      RATE_CONTROL *const lrc = &lc->rc;
-      lrc->frames_since_golden = rc->frames_since_golden;
-    }
-  }
-
   if (brc_libvpx_vp9_frame_is_intra_only(cm)) rc->frames_since_key = 0;
   if (cm->show_frame) {
     rc->frames_since_key++;
     rc->frames_to_key--;
   }
 
-  // Trigger the resizing of the next frame if it is scaled.
-  if (oxcf->pass != 0) {
-#if 0
-    cpi->resize_pending =
-        rc->next_frame_size_selector != rc->frame_size_selector;
-#endif
-    rc->frame_size_selector = rc->next_frame_size_selector;
-  }
-
-#if 0
-  //Fixme: No VBR Support yet
-  if (oxcf->pass == 0) {
-    if (!brc_libvpx_vp9_frame_is_intra_only(cm))
-      if (cpi->sf.use_altref_onepass) update_altref_usage(cpi);
-    cpi->rc.last_frame_is_src_altref = cpi->rc.is_src_frame_alt_ref;
-  }
-#endif
-  if (!brc_libvpx_vp9_frame_is_intra_only(cm)) rc->reset_high_source_sad = 0;
-
   rc->last_avg_frame_bandwidth = rc->avg_frame_bandwidth;
   if (cpi->use_svc && svc->spatial_layer_id < svc->number_spatial_layers - 1)
     svc->lower_layer_qindex = cm->base_qindex;
-
-#if 0
-  if (oxcf->pass == 0) {
-    if (!brc_libvpx_vp9_frame_is_intra_only(cm) &&
-        (!cpi->use_svc
-	 ||
-         (cpi->use_svc &&
-          !svc->layer_context[svc->temporal_layer_id].is_key_frame &&
-          svc->spatial_layer_id == svc->number_spatial_layers - 1)
-
-	 )) {
-       //Note: Only required in VBR: compute_frame_low_motion
-      //compute_frame_low_motion(cpi);
-    }
-
-    // For SVC: set avg_frame_low_motion (only computed on top spatial layer)
-    // to all lower spatial layers.
-    if (cpi->use_svc &&
-        svc->spatial_layer_id == svc->number_spatial_layers - 1) {
-      int i;
-      for (i = 0; i < svc->number_spatial_layers - 1; ++i) {
-        const int layer = LAYER_IDS_TO_IDX(i, svc->temporal_layer_id,
-                                           svc->number_temporal_layers);
-        LAYER_CONTEXT *const lc = &svc->layer_context[layer];
-        RATE_CONTROL *const lrc = &lc->rc;
-        lrc->avg_frame_low_motion = rc->avg_frame_low_motion;
-      }
-    }
-
-    cpi->rc.last_frame_is_src_altref = cpi->rc.is_src_frame_alt_ref;
-  }
-  if (!brc_libvpx_vp9_frame_is_intra_only(cm)) rc->reset_high_source_sad = 0;
-
-  rc->last_avg_frame_bandwidth = rc->avg_frame_bandwidth;
-
-  if (cpi->use_svc && svc->spatial_layer_id < svc->number_spatial_layers - 1)
-    svc->lower_layer_qindex = cm->base_qindex;
-#endif
 }
 
 int brc_libvpx_vp9_calc_pframe_target_size_one_pass_cbr(const VP9_COMP *cpi) {
@@ -1290,8 +1194,6 @@ void brc_libvpx_vp9_rc_get_svc_params(VP9_COMP *cpi) {
   int target = rc->avg_frame_bandwidth;
   int layer = LAYER_IDS_TO_IDX(svc->spatial_layer_id, svc->temporal_layer_id,
                                svc->number_temporal_layers);
-  if (svc->first_spatial_layer_to_encode)
-    svc->layer_context[svc->temporal_layer_id].is_key_frame = 0;
   // Periodic key frames is based on the super-frame counter
   // (svc.current_superframe), also only base spatial layer is key frame.
   // Key frame is set for any of the following: very first frame, frame flags

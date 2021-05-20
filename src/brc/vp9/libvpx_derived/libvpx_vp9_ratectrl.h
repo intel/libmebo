@@ -30,8 +30,7 @@
 /*! Spatial Scalability: Maximum number of coding layers */
 #define VPX_SS_MAX_LAYERS 5
 
-#define REFS_PER_FRAME 3
-  
+#define REFS_PER_FRAME 3  
 #define REF_FRAMES_LOG2 3
 #define REF_FRAMES (1 << REF_FRAMES_LOG2)
 
@@ -43,19 +42,13 @@
 #define MAX_MB_RATE 250
 #define MAXRATE_1080P 4000000
 
-#define DEFAULT_KF_BOOST 2000
-#define DEFAULT_GF_BOOST 2000
-
-#define LIMIT_QRANGE_FOR_ALTREF_AND_KEY 1
-
 #define MIN_BPB_FACTOR 0.005
 #define MAX_BPB_FACTOR 50
 
 #define MAXQ 255
 #define QINDEX_RANGE 256
 #define QINDEX_BITS 8
-#define MAX_SEGMENTS 8
-#define MAX_LAG_BUFFERS 25
+
 // Used to control aggressive VBR mode.
 // #define AGGRESSIVE_VBR 1
 // Bits Per MB at different Q (Multiplied by 512)
@@ -63,12 +56,8 @@
 #define MIN_GF_INTERVAL 4
 #define MAX_GF_INTERVAL 16
 #define FIXED_GF_INTERVAL 8  // Used in some testing modes only
-#define ONEHALFONLY_RESIZE 0
+
 #define FRAME_OVERHEAD_BITS 200
-// Threshold used to define a KF group as static (e.g. a slide show).
-// Essentially this means that no frame in the group has more than 1% of MBs
-// that are not marked as coded with 0,0 motion in the first pass.
-#define STATIC_KF_GROUP_THRESH 99
 // The maximum duration of a GF group that is static (for example a slide show).
 #define MAX_STATIC_GF_GROUP_LENGTH 250
 #define VP9_LEVELS 14
@@ -77,25 +66,6 @@
 
 #define VPXMIN(x, y) (((x) < (y)) ? (x) : (y))
 #define VPXMAX(x, y) (((x) > (y)) ? (x) : (y))
-
-// Max rate per frame for 1080P and below encodes if no level requirement given.
-// For larger formats limit to MAX_MB_RATE bits per MB
-// 4Mbits is derived from the level requirement for level 4 (1080P 30) which
-// requires that HW can sustain a rate of 16Mbits over a 4 frame group.
-// If a lower level requirement is specified then this may over ride this value.
-#define MAX_MB_RATE 250
-#define MAXRATE_1080P 4000000
-
-#define DEFAULT_KF_BOOST 2000
-#define DEFAULT_GF_BOOST 2000
-
-#define LIMIT_QRANGE_FOR_ALTREF_AND_KEY 1
-
-#define MIN_BPB_FACTOR 0.005
-#define MAX_BPB_FACTOR 50
-
-#define vp9_zero(dest) memset(&(dest), 0, sizeof(dest))
-#define vp9_zero_array(dest, n) memset(dest, 0, (n) * sizeof(*(dest)))
 
 typedef enum vpx_bit_depth {
   VPX_BITS_8 = 8,   /**<  8 bits */
@@ -114,22 +84,6 @@ typedef enum {
 
 // Bits Per MB at different Q (Multiplied by 512)
 #define BPER_MB_NORMBITS 9
-
-#define MIN_GF_INTERVAL 4
-#define MAX_GF_INTERVAL 16
-#define FIXED_GF_INTERVAL 8  // Used in some testing modes only
-#define ONEHALFONLY_RESIZE 0
-
-#define MAX_SEGMENTS 8
-
-#define MAX_LAG_BUFFERS 25
-
-#define FRAME_OVERHEAD_BITS 200
-
-// Threshold used to define a KF group as static (e.g. a slide show).
-// Essentially this means that no frame in the group has more than 1% of MBs
-// that are not marked as coded with 0,0 motion in the first pass.
-#define STATIC_KF_GROUP_THRESH 99
 
 // The maximum duration of a GF group that is static (for example a slide show).
 #define MAX_STATIC_GF_GROUP_LENGTH 250
@@ -192,36 +146,9 @@ typedef enum {
   RATE_FACTOR_LEVELS = 5
 } RATE_FACTOR_LEVEL;
 
-// Internal frame scaling level.
-typedef enum {
-  UNSCALED = 0,     // Frame is unscaled.
-  SCALE_STEP1 = 1,  // First-level down-scaling.
-  FRAME_SCALE_STEPS
-} FRAME_SCALE_LEVEL;
-
-typedef enum {
-  NO_RESIZE = 0,
-  DOWN_THREEFOUR = 1,  // From orig to 3/4.
-  DOWN_ONEHALF = 2,    // From orig or 3/4 to 1/2.
-  UP_THREEFOUR = -1,   // From 1/2 to 3/4.
-  UP_ORIG = -2,        // From 1/2 or 3/4 to orig.
-} RESIZE_ACTION;
-
-typedef enum { ORIG = 0, THREE_QUARTER = 1, ONE_HALF = 2 } RESIZE_STATE;
-
-// Frame dimensions multiplier wrt the native frame size, in 1/16ths,
-// specified for the scale-up case.
-// e.g. 24 => 16/24 = 2/3 of native size. The restriction to 1/16th is
-// intended to match the capabilities of the normative scaling filters,
-// giving precedence to the up-scaling accuracy.
-static const int frame_scale_factor[FRAME_SCALE_STEPS] = { 16, 24 };
-
-// Multiplier of the target rate to be used as threshold for triggering scaling.
-static const double rate_thresh_mult[FRAME_SCALE_STEPS] = { 1.0, 2.0 };
-
 // Scale dependent Rate Correction Factor multipliers. Compensates for the
 // greater number of bits per pixel generated in down-scaled frames.
-static const double rcf_mult[FRAME_SCALE_STEPS] = { 1.0, 2.0 };
+static const double rcf_mult[2] = { 1.0, 2.0 };
 
 typedef enum {
   VP9E_CONTENT_DEFAULT,
@@ -314,26 +241,6 @@ typedef enum vp9e_temporal_layering_mode {
   VP9E_TEMPORAL_LAYERING_MODE_0212 = 3
 } VP9E_TEMPORAL_LAYERING_MODE;
 
-/*!\brief VP9 svc frame dropping mode.
- *
- * This defines the frame drop mode for SVC.
- *
- */
-typedef enum {
-  CONSTRAINED_LAYER_DROP,
-  /**< Upper layers are constrained to drop if current layer drops. */
-  LAYER_DROP,           /**< Any spatial layer can drop. */
-  FULL_SUPERFRAME_DROP, /**< Only full superframe can drop. */
-  CONSTRAINED_FROM_ABOVE_DROP,
-  /**< Lower layers are constrained to drop if current layer drops. */
-} SVC_LAYER_DROP_MODE;
-
-typedef enum {
-  RESIZE_NONE = 0,    // No frame resizing allowed (except for SVC).
-  RESIZE_FIXED = 1,   // All frames are coded at the specified dimension.
-  RESIZE_DYNAMIC = 2  // Coded size of each frame is determined by the codec.
-} RESIZE_TYPE;
-
 typedef struct {
   // Rate targetting variables
   int base_frame_target;  // A baseline frame target before adjustment
@@ -414,29 +321,16 @@ typedef struct {
   // Keep track of the last target average frame bandwidth.
   int last_avg_frame_bandwidth;
 
-  // Auto frame-scaling variables.
-  FRAME_SCALE_LEVEL frame_size_selector;
-  FRAME_SCALE_LEVEL next_frame_size_selector;
-  int frame_width[FRAME_SCALE_STEPS];
-  int frame_height[FRAME_SCALE_STEPS];
-  int rf_level_maxq[RATE_FACTOR_LEVELS];
-
   int fac_active_worst_inter;
   int fac_active_worst_gf;
-  int64_t avg_source_sad[MAX_LAG_BUFFERS];
-  int64_t prev_avg_source_sad_lag;
-  int high_source_sad_lagindex;
-  int high_num_blocks_with_motion;
   int alt_ref_gf_group;
   int last_frame_is_src_altref;
-  int high_source_sad;
   int count_last_scene_change;
   int hybrid_intra_scene_change;
   int re_encode_maxq_scene_change;
   int avg_frame_low_motion;
   int af_ratio_onepass_vbr;
   int force_qpmin;
-  int reset_high_source_sad;
   double perc_arf_usage;
   int force_max_q;
   // Last frame was dropped post encode on scene change.

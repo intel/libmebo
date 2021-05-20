@@ -25,21 +25,11 @@ void vp9_init_layer_context(VP9_COMP *const cpi) {
 
   svc->spatial_layer_id = 0;
   svc->temporal_layer_id = 0;
-  svc->use_gf_temporal_ref = 1;
-  svc->use_gf_temporal_ref_current_layer = 0;
-  svc->current_superframe = 0;
-  svc->skip_enhancement_layer = 0;
-  svc->disable_inter_layer_pred = INTER_LAYER_PRED_ON;
-  svc->framedrop_mode = CONSTRAINED_LAYER_DROP;
   svc->set_intra_only_frame = 0;
   svc->previous_frame_is_intra_only = 0;
   svc->superframe_has_layer_sync = 0;
-  svc->num_encoded_top_layer = 0;
-  svc->single_layer_svc = 0;
 
   for (sl = 0; sl < oxcf->ss_number_layers; ++sl) {
-    svc->framedrop_thresh[sl] = oxcf->drop_frames_water_mark;
-    svc->drop_count[sl] = 0;
     svc->spatial_layer_sync[sl] = 0;
   }
 
@@ -184,10 +174,6 @@ void vp9_update_layer_context_change_config(VP9_COMP *const cpi,
     if (oxcf->layer_target_bitrate[layer] > 0)
       num_spatial_layers_nonzero_rate += 1;
   }
-  if (num_spatial_layers_nonzero_rate == 1)
-    svc->single_layer_svc = 1;
-  else
-    svc->single_layer_svc = 0;
 }
 
 static LAYER_CONTEXT *get_layer_context(VP9_COMP *const cpi) {
@@ -226,21 +212,6 @@ void vp9_update_temporal_layer_framerate(VP9_COMP *const cpi) {
         (int)((lc->target_bandwidth - prev_layer_target_bandwidth) /
               (lc->framerate - prev_layer_framerate));
   }
-}
-
-void vp9_update_spatial_layer_framerate(VP9_COMP *const cpi, double framerate) {
-  const VP9EncoderConfig *const oxcf = &cpi->oxcf;
-  LAYER_CONTEXT *const lc = get_layer_context(cpi);
-  RATE_CONTROL *const lrc = &lc->rc;
-
-  lc->framerate = framerate;
-  lrc->avg_frame_bandwidth = (int)(lc->target_bandwidth / lc->framerate);
-  lrc->min_frame_bandwidth =
-      (int)(lrc->avg_frame_bandwidth * oxcf->two_pass_vbrmin_section / 100);
-  lrc->max_frame_bandwidth = (int)(((int64_t)lrc->avg_frame_bandwidth *
-                                    oxcf->two_pass_vbrmax_section) /
-                                   100);
-  brc_libvpx_vp9_rc_set_gf_interval_range(cpi, lrc);
 }
 
 void vp9_restore_layer_context(VP9_COMP *const cpi) {
@@ -344,24 +315,6 @@ void vp9_svc_check_spatial_layer_sync(VP9_COMP *const cpi) {
       // reset the pattern counters and reset to base temporal layer.
       if (svc->superframe_has_layer_sync)
         vp9_svc_reset_temporal_layers(cpi, cpi->common.frame_type == KEY_FRAME);
-    }
-   // If the layer sync is set for this current spatial layer then
-    // disable the temporal reference.
-    if (svc->spatial_layer_id > 0 &&
-        svc->spatial_layer_sync[svc->spatial_layer_id]) {
-      if (svc->use_gf_temporal_ref_current_layer) {
-        int index = svc->spatial_layer_id;
-        // If golden is used as second reference: need to remove it from
-        // prediction, reset refresh period to 0, and update the reference.
-        svc->use_gf_temporal_ref_current_layer = 0;
-        cpi->rc.baseline_gf_interval = 0;
-        cpi->rc.frames_till_gf_update_due = 0;
-        // On layer sync frame we must update the buffer index used for long
-        // term reference. Use the alt_ref since it is not used or updated on
-        // sync frames.
-        if (svc->number_spatial_layers == 3) index = svc->spatial_layer_id - 1;
-        assert(index >= 0);
-      }
     }
   }
 }
