@@ -125,7 +125,7 @@ typedef enum
 } LibMeboBrcAlgorithmID;
 
 /**
-LIBMEBO_CODEC_VP8, * Return status type of libmebo APIs
+ * Return status type of libmebo APIs
  */
 typedef enum {
   LIBMEBO_STATUS_SUCCESS,
@@ -142,7 +142,6 @@ typedef enum {
  * Rate Control Modes
  */
 typedef enum {
-  LIBMEBO_RC_CQP,
   LIBMEBO_RC_CBR,
   LIBMEBO_RC_VBR
 } LibMeboRateControlMode;
@@ -373,6 +372,11 @@ typedef struct _LibMeboRateControllerConfig {
    * to each temporal layer.
    */
   int ts_rate_decimator[LIBMEBO_TS_MAX_LAYERS];
+
+  /*
+   *  \biref Rate control mode
+   */
+  LibMeboRateControlMode rc_mode;
 
   /* Reserved bytes for future use, must be zero */
   uint32_t _libmebo_rc_config_reserved[32];
