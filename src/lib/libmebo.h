@@ -31,17 +31,17 @@
 #include <stdint.h>
 
 /**
- * \mainpage Library for Media Encode Bitrate-control-algorithm Orchestration (libmebo)
+ * \mainpage Library for Media Encode Bitrate-control-algorithm Orchestration (LibMebo)
  *
  * \section intro Introduction
- * LibMebo is an open source library for orchestrating the
- * bitrate algorithms for an encoder pipeline. The encoder
- * itself could be running on hardware or software.
+ * LibMebo is an open-source library to orchestrate the bitrate
+ * control algorithms for a video encoder pipeline.This library
+ * has a collection of algorithms derived from various video encoder
+ * libraries.
  *
- * The intention for libmebo is to allow the various software and
- * hardware encoders across the frameworks and operatings systems
- * to use custom bitrate control alogorithms for specific
- * use cases.
+ * The intention for Libmebo is to allow the video encoder implementations
+ * to enable customized bitrate control outside of the core pipeline.
+ * The encoder itself could be running on software or hardware.
  *
  * \section api_howto How to use the libmebo apis with an encoder
  *

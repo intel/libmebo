@@ -1,6 +1,6 @@
 # LibMebo: Library for Media Encode bitrate-control-algorithm Orchestration.
 
-LibMebo is an open source library for orchestrating the bitrate algorithms for an encoder pipeline. The encoder itself could be running on hardware or software.
+LibMebo is an open source library for orchestrating the bitrate algorithms for a video encoder pipeline. The encoder itself could be running on hardware or software. LibMebo has a collection of BRC algorithms derived from various open-source encoder implementations.
 
 See the [explainer](https://github.com/intel/libmebo/blob/master/explainer.md) for more info.
 
