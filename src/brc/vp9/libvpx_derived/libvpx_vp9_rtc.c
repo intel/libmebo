@@ -247,6 +247,10 @@ brc_vp9_validate (LibMeboRateControllerConfig *cfg)
 {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
+  if (cfg->rc_mode != LIBMEBO_RC_CBR)
+    return LIBMEBO_STATUS_UNSUPPORTED_RC_MODE;
+
+  RANGE_CHECK(cfg, rc_mode, LIBMEBO_RC_CBR, 65535);
   RANGE_CHECK(cfg, width, 1, 65535);
   RANGE_CHECK(cfg, height, 1, 65535);
   RANGE_CHECK_HI(cfg, max_quantizer, 63);
