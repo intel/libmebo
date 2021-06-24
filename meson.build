@@ -1,6 +1,6 @@
 project('LibMebo', 'c',
-  version : '0.1.0',
-  meson_version : '>= 0.30')
+  version : '0.0.1',
+  meson_version : '>= 0.49')
 
 LIBMEBO_ENABLE_VP8 = get_option('with_vp8') != 'no'
 LIBMEBO_ENABLE_VP9 = get_option('with_vp9') != 'no'
