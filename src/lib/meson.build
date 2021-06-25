@@ -23,6 +23,6 @@ libmebo_dep_internal = declare_dependency(link_with: libmebo,
 pkgconfig.generate(
   name : 'libmebo',
   description : 'Libraray for Media Encode Bitrate-control-algorithm Orchestration',
-  version : '0.0.1',
+  version : meson.project_version(),
   libraries : libmebo,
 )
