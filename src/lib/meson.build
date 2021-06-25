@@ -13,6 +13,8 @@ libmebo  = shared_library('mebo',
   c_args : libmebo_args,
   include_directories: [configinc, libbrcinc],
   dependencies: [libbrc_dep],
+  version : libmebo_soname_version,
+  soversion : libmebo_version_major,
   install : true,
   install_dir : libmebo_install_dir,)
 

@@ -2,6 +2,12 @@ project('LibMebo', 'c',
   version : '0.0.1',
   meson_version : '>= 0.49')
 
+libmebo_soname_version   = '0.0.1'
+libmebo_version_array    = libmebo_soname_version.split('.')
+libmebo_version_major    = libmebo_version_array[0]
+libmebo_version_minor    = libmebo_version_array[1]
+libmebo_version_revision = libmebo_version_array[2]
+
 LIBMEBO_ENABLE_VP8 = get_option('with_vp8') != 'no'
 LIBMEBO_ENABLE_VP9 = get_option('with_vp9') != 'no'
 LIBMEBO_ENABLE_AV1 = get_option('with_av1') != 'no'
