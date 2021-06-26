@@ -135,7 +135,8 @@ static const brc_algo_map algo_impl_map[] = {
   {
     LIBMEBO_CODEC_UNKNOWN,
     LIBMEBO_BRC_ALGORITHM_UNKNOWN,
-    "Unknown"
+    "Unknown",
+    { NULL, NULL, NULL, NULL, NULL, NULL, NULL },
   },
 };
 

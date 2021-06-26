@@ -363,9 +363,9 @@ libmebo_software_brc_init (
       default:
         break;
   }
-  for (int sl = 0; sl < enc_params.num_sl; sl++) {
+  for (unsigned int sl = 0; sl < enc_params.num_sl; sl++) {
     int bitrate_sum = 0;
-    for (int tl = 0; tl < enc_params.num_tl; tl++) {
+    for (unsigned int tl = 0; tl < enc_params.num_tl; tl++) {
       const int layer_id = LAYER_IDS_TO_IDX(sl, tl, enc_params.num_tl);
       rc_config->max_quantizers[layer_id] = rc_config->max_quantizer;
       rc_config->min_quantizers[layer_id] = rc_config->min_quantizer;
@@ -401,9 +401,9 @@ static void display_encode_status (unsigned int bitstream_size) {
 		  enc_params.framecount);
   if (enc_params.num_sl > 1 || enc_params.num_tl > 1) {
     printf (	  "Target bitrates in kbps:\n");
-    for (int sl = 0; sl <enc_params.num_sl; sl++) {
+    for (unsigned int sl = 0; sl <enc_params.num_sl; sl++) {
       int bitrate = 0;
-      for (int tl = 0; tl <enc_params.num_tl; tl++) {
+      for (unsigned int tl = 0; tl <enc_params.num_tl; tl++) {
         bitrate += layered_bitrates[sl][tl];
         printf ("S%dT%d target bitrate = %d \n",sl, tl, layered_bitrates[sl][tl]);
       }
@@ -415,8 +415,8 @@ static void display_encode_status (unsigned int bitstream_size) {
   //SVC
   if (enc_params.num_sl > 1 || enc_params.num_tl > 1) {
     int total_bitrate = 0;
-    for (int sl = 0; sl < enc_params.num_sl; sl++) {
-      for (int tl = 0; tl < enc_params.num_tl; tl++) {
+    for (unsigned int sl = 0; sl < enc_params.num_sl; sl++) {
+      for (unsigned int tl = 0; tl < enc_params.num_tl; tl++) {
         int bitrate = 0;
         bitrate = (((layered_stream_size [sl][tl] / layered_frame_count[sl][tl]) *
                    layered_frame_rate[tl]) * 8) / 1000;
@@ -501,14 +501,14 @@ start_virtual_encode (LibMeboRateController *rc)
    int key_frame_period = 30;
    uint32_t buf_size = 1024;
    uint32_t total_size = 0;
-   uint32_t prev_qp = 0;
+   int prev_qp = 0;
    uint32_t predicted_size = 0;
    uint32_t lower =0, upper=0;
    LibMeboFrameType libmebo_frame_type;
    LibMeboRCFrameParams rc_frame_params;
    unsigned int preset = enc_params.preset;
    unsigned int svc_preset = 0;
-   unsigned int frame_count = 0;
+   int frame_count = 0;
    unsigned int prev_is_key = 0;
 
    if (verbose)

@@ -1083,7 +1083,6 @@ void av1_rc_compute_frame_size_bounds(const AV1_COMP *cpi,
  *
  * \ingroup rate_control
  * \param[in]       cpi          Top level encoder structure
- * \param[in,out]   rc           Top level rate control structure
  * \param[in]       width        Coded frame width
  * \param[in]       height       Coded frame height
  * \param[in]       gf_index     Index of this frame in the golden frame group
@@ -1092,7 +1091,7 @@ void av1_rc_compute_frame_size_bounds(const AV1_COMP *cpi,
  * \return Returns selected q index to be used for encoding this frame.
  * Also, updates \c rc->arf_q.
  */
-int av1_rc_pick_q_and_bounds(const AV1_COMP *cpi, AV1_RATE_CONTROL *rc,
+int av1_rc_pick_q_and_bounds(const AV1_COMP *cpi,
                              int width, int height, /*int gf_index,*/
                              int *bottom_index, int *top_index);
 
@@ -1165,12 +1164,10 @@ void av1_rc_set_frame_target(AV1_COMP *cpi, int target, int width,
  * \callergraph
  *
  * \param[in]       cpi                 Top level encoder structure
- * \param[in]       frame_update_type   Type of frame
  *
  * \return  Returns the target number of bits for this frame.
  */
-int av1_calc_pframe_target_size_one_pass_cbr(
-    const AV1_COMP *cpi, FRAME_UPDATE_TYPE frame_update_type);
+int av1_calc_pframe_target_size_one_pass_cbr(const AV1_COMP *cpi);
 
 /*!\brief Calculates how many bits to use for an i frame in one pass cbr
  *

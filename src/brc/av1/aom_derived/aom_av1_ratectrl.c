@@ -755,7 +755,7 @@ void av1_rc_update_rate_correction_factors(AV1_COMP *cpi, int width,
 }
 
 // Calculate rate for the given 'q'.
-static int get_bits_per_mb(const AV1_COMP *cpi, int use_cyclic_refresh,
+static int get_bits_per_mb(const AV1_COMP *cpi,
                            double correction_factor, int q) {
   const AV1_COMMON *const cm = &cpi->common;
   //ToDo: add support for av1_cyclic_refresh_rc_bits_per_mb
@@ -785,8 +785,6 @@ static int find_closest_qindex_by_rate(int desired_bits_per_mb,
                                        const AV1_COMP *cpi,
                                        double correction_factor,
                                        int best_qindex, int worst_qindex) {
-  const int use_cyclic_refresh = 0;
-
   // Find 'qindex' based on 'desired_bits_per_mb'.
   assert(best_qindex <= worst_qindex);
   int low = best_qindex;
@@ -794,7 +792,7 @@ static int find_closest_qindex_by_rate(int desired_bits_per_mb,
   while (low < high) {
     const int mid = (low + high) >> 1;
     const int mid_bits_per_mb =
-        get_bits_per_mb(cpi, use_cyclic_refresh, correction_factor, mid);
+        get_bits_per_mb(cpi, correction_factor, mid);
     if (mid_bits_per_mb > desired_bits_per_mb) {
       low = mid + 1;
     } else {
@@ -806,7 +804,7 @@ static int find_closest_qindex_by_rate(int desired_bits_per_mb,
   // Calculate rate difference of this q index from the desired rate.
   const int curr_q = low;
   const int curr_bits_per_mb =
-      get_bits_per_mb(cpi, use_cyclic_refresh, correction_factor, curr_q);
+      get_bits_per_mb(cpi, correction_factor, curr_q);
   const int curr_bit_diff = (curr_bits_per_mb <= desired_bits_per_mb)
                                 ? desired_bits_per_mb - curr_bits_per_mb
                                 : INT_MAX;
@@ -820,7 +818,7 @@ static int find_closest_qindex_by_rate(int desired_bits_per_mb,
     prev_bit_diff = INT_MAX;
   } else {
     const int prev_bits_per_mb =
-        get_bits_per_mb(cpi, use_cyclic_refresh, correction_factor, prev_q);
+        get_bits_per_mb(cpi, correction_factor, prev_q);
     assert(prev_bits_per_mb > desired_bits_per_mb);
     prev_bit_diff = prev_bits_per_mb - desired_bits_per_mb;
   }
@@ -1055,7 +1053,7 @@ static int rc_pick_q_and_bounds_no_stats_cbr(const AV1_COMP *cpi, int width,
 }
 
 //derived from aom's av1_rc_pick_q_and_bounds()
-int av1_rc_pick_q_and_bounds(const AV1_COMP *cpi, AV1_RATE_CONTROL *rc, int width,
+int av1_rc_pick_q_and_bounds(const AV1_COMP *cpi, int width,
                              int height, /* int gf_index,*/ int *bottom_index,
                              int *top_index) {
   int q;
@@ -1352,8 +1350,7 @@ void av1_set_target_rate(AV1_COMP *cpi, int width, int height) {
   av1_rc_set_frame_target(cpi, target_rate, width, height);
 }
 
-int av1_calc_pframe_target_size_one_pass_cbr(
-    const AV1_COMP *cpi, FRAME_UPDATE_TYPE frame_update_type) {
+int av1_calc_pframe_target_size_one_pass_cbr(const AV1_COMP *cpi) {
   const AV1EncoderConfig *oxcf = &cpi->oxcf;
   const AV1_RATE_CONTROL *rc = &cpi->rc;
   const RateControlCfg *rc_cfg = &oxcf->rc_cfg;
@@ -1487,8 +1484,7 @@ void av1_get_one_pass_rt_params(AV1_COMP *cpi,
   if (frame_type == AV1_KEY_FRAME) {
     target = av1_calc_iframe_target_size_one_pass_cbr(cpi);
   } else {
-    target = av1_calc_pframe_target_size_one_pass_cbr(
-        cpi, gf_group->update_type[gf_group->index]);
+    target = av1_calc_pframe_target_size_one_pass_cbr(cpi);
   }
 
   av1_rc_set_frame_target(cpi, target, cm->width, cm->height);

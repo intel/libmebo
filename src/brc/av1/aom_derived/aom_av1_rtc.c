@@ -17,7 +17,7 @@
 #define ERROR(str)                  \
   do {                              \
     fprintf(stderr, "%s \n", str);	    \
-    return STATUS_BRC_AV1_INVALID_PARAM; \
+    return LIBMEBO_STATUS_INVALID_PARAM; \
   } while (0)
 
 #define RANGE_CHECK(p, memb, lo, hi)                                     \
@@ -74,16 +74,11 @@ brc_av1_get_qp(BrcCodecEnginePtr engine_ptr, int *qp) {
 
 LibMeboStatus
 brc_av1_get_loop_filter_level(BrcCodecEnginePtr engine_ptr, int *filter_level) {
+  if (!engine_ptr)
+          return LIBMEBO_STATUS_INVALID_PARAM;
+  fprintf(stderr, "%s \n", "Warning: Not supported");
   *filter_level = 0;
-#if 0
-  AV1_COMP *cpi_ = &rtc->cpi_;
-  struct loopfilter *const lf = &cpi_->common.lf;
-  av1_pick_filter_level(cpi_, LPF_PICK_FROM_Q);
-  return lf->filter_level;
-#endif
-  //ToDo:
-  //check  loopfilter_frame(cpi, cm);
-   return LIBMEBO_STATUS_SUCCESS;
+  return LIBMEBO_STATUS_UNIMPLEMENTED;
 }
 
 static inline void update_keyframe_counters(AV1_COMP *cpi) {
@@ -110,6 +105,10 @@ brc_av1_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   AV1EncoderConfig *oxcf = &cpi->oxcf;
   AV1_COMMON *const cm = &cpi->common;
   int top_index = 0, bottom_index = 0, q = 0;
+  AV1_FRAME_TYPE frame_type;
+
+  frame_type =
+      (frame_params->frame_type == LIBMEBO_KEY_FRAME) ? AV1_KEY_FRAME : AV1_INTER_FRAME;
 
   if (!cpi->initial_dimensions.width){
     cpi->initial_dimensions.width = cm->width;
@@ -127,7 +126,7 @@ brc_av1_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   //Taken from av1_encode_strategy()
   adjust_frame_rate(cpi /*, source->ts_start, source->ts_end*/);
 
-  av1_get_one_pass_rt_params(cpi, frame_params->frame_type);
+  av1_get_one_pass_rt_params(cpi, frame_type);
   //Not configured for CONFIG_REALTIME_ONLY, so the codepath
   //is derived from av1_get_second_pass_params()
   //Fixme:
@@ -155,7 +154,7 @@ brc_av1_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   //We use the real_time mode for encode
   //denoise_and_encode()
   //ToDo: Add lf params: set_default_lf_deltas(&cm->lf);
-  cm->current_frame.frame_type = frame_params->frame_type; 
+  cm->current_frame.frame_type = frame_type; 
 
   //=======derived from av1_encode()==========
   if (cm->current_frame.frame_type == AV1_KEY_FRAME) {
@@ -189,7 +188,7 @@ brc_av1_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
 
   //Derived from av1_set_size_dependent_vars(cpi, &q, &bottom_index, &top_index);
    // Decide q and q bounds.
-  q = av1_rc_pick_q_and_bounds(cpi, &cpi->rc, cm->width, cm->height,
+  q = av1_rc_pick_q_and_bounds(cpi, cm->width, cm->height,
                                 /* cpi->gf_group.index,*/ &bottom_index, &top_index);
 
   cm->quant_params.base_qindex = q;
@@ -508,7 +507,7 @@ brc_av1_validate (LibMeboRateControllerConfig *cfg)
     ERROR("ss_number_layers * ts_number_layers is out of range");
 
    if (cfg->ts_number_layers > 1) {
-    unsigned int sl, tl;
+    int sl, tl;
     for (sl = 1; sl < cfg->ss_number_layers; ++sl) {
       for (tl = 1; tl < cfg->ts_number_layers; ++tl) {
         const int layer = LAYER_IDS_TO_IDX(sl, tl, cfg->ts_number_layers);

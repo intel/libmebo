@@ -1151,7 +1151,7 @@ int libvpx_vp8_pick_frame_size(VP8_COMP *cpi) {
 // (i.e., halfway during the encoding of the frame) to save cycles.
 //
 // LibMebo: We are netither using screen_content_mode nor allowing drop frames
-int libvpx_vp8_drop_encodedframe_overshoot(VP8_COMP *cpi, int Q) {
+int libvpx_vp8_drop_encodedframe_overshoot(VP8_COMP *cpi) {
   cpi->frames_since_last_drop_overshoot++;
   return 0;
 }

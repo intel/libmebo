@@ -89,10 +89,11 @@ brc_vp8_get_qp(BrcCodecEnginePtr engine_ptr, int *qp) {
 
 LibMeboStatus
 brc_vp8_get_loop_filter_level(BrcCodecEnginePtr engine_ptr, int *filter_level) {
+  if (!engine_ptr)
+	  return LIBMEBO_STATUS_INVALID_PARAM;
   fprintf(stderr, "%s \n", "Warning: Not supported");
   *filter_level = 0;
-  //Fixme: return error
-  return LIBMEBO_STATUS_SUCCESS;
+  return LIBMEBO_STATUS_UNIMPLEMENTED;
 }
 
 LibMeboStatus
@@ -211,7 +212,7 @@ brc_vp8_compute_qp (BrcCodecEnginePtr engine_ptr, LibMeboRCFrameParams *frame_pa
   }
 
   if (cpi_->pass == 0) {
-      if (libvpx_vp8_drop_encodedframe_overshoot(cpi_, Q))
+      if (libvpx_vp8_drop_encodedframe_overshoot(cpi_))
         return LIBMEBO_STATUS_SUCCESS;
   }
 
@@ -452,7 +453,7 @@ brc_vp8_validate (LibMeboRateControllerConfig *cfg)
     ERROR("ss_number_layers * ts_number_layers is out of range");
 
    if (cfg->ts_number_layers > 1) {
-    unsigned int sl, tl;
+    int sl, tl;
     for (sl = 1; sl < cfg->ss_number_layers; ++sl) {
       for (tl = 1; tl < cfg->ts_number_layers; ++tl) {
         const int layer = LAYER_IDS_TO_IDX(sl, tl, cfg->ts_number_layers);

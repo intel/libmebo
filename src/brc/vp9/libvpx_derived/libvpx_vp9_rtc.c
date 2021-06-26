@@ -265,7 +265,7 @@ brc_vp9_validate (LibMeboRateControllerConfig *cfg)
     ERROR("ss_number_layers * ts_number_layers is out of range");
 
    if (cfg->ts_number_layers > 1) {
-    unsigned int sl, tl;
+    int sl, tl;
     for (sl = 1; sl < cfg->ss_number_layers; ++sl) {
       for (tl = 1; tl < cfg->ts_number_layers; ++tl) {
         const int layer = LAYER_IDS_TO_IDX(sl, tl, cfg->ts_number_layers);

@@ -32,7 +32,7 @@ void libvpx_vp8_compute_frame_size_bounds(VP8_COMP *cpi,
 /* return of 0 means drop frame */
 int libvpx_vp8_pick_frame_size(VP8_COMP *cpi);
 
-int libvpx_vp8_drop_encodedframe_overshoot(VP8_COMP *cpi, int Q);
+int libvpx_vp8_drop_encodedframe_overshoot(VP8_COMP *cpi);
 
 void libvpx_vp8_new_framerate(VP8_COMP *cpi, double framerate);
 
