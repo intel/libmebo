@@ -1,10 +1,10 @@
 project('LibMebo', 'c',
-  version : '0.0.1',
+  version : '0.1.0',
   meson_version : '>= 0.49',
   default_options: [ 'warning_level=2',
                      'buildtype=debugoptimized' ])
 
-libmebo_soname_version   = '0.0.1'
+libmebo_soname_version   = '0.1.0'
 libmebo_version_array    = libmebo_soname_version.split('.')
 libmebo_version_major    = libmebo_version_array[0]
 libmebo_version_minor    = libmebo_version_array[1]

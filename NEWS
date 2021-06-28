@@ -1,0 +1,9 @@
+Changes for 0.1.0:
+----------------------------
+
+Initial release of libmebo.
+ - Add libmebo API for Software Bitrate Control
+ - Add CBR mode bitrate algorithm for VP9 encode (derived from libvpx)
+ - Add CBR mode bitrate algorithm for VP8 encode (derived from libvpx)
+ - Add CBR mode bitrate algorithm for AV1 encode (derived from aom libraray)
+ - Add a sample fake-encode application for testing libmebo
