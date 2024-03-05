@@ -2,7 +2,7 @@
 
 ### License
 
-<PROJECT NAME> is licensed under the terms in [LICENSE]<link to license file in repo>. By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.
+Libmebo is licensed under the terms in [BSD-3 Clause](https://github.com/intel/Libmebo?tab=BSD-3-Clause-1-ov-file/). By contributing to the project, you agree to the license and copyright terms therein and release your contribution under these terms.
 
 ### Sign your work
 
