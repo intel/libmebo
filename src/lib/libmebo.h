@@ -29,7 +29,9 @@
 #ifndef __LIBMEBO_H__
 #define __LIBMEBO_H__
 #include <stdint.h>
-
+#define LIBMEBO_ENABLE_AV1 1
+#define LIBMEBO_ENABLE_VP9 1
+#define LIBMEBO_ENABLE_VP8 1
 /**
  * \mainpage Library for Media Encode Bitrate-control-algorithm Orchestration (LibMebo)
  *

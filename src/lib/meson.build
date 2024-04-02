@@ -1,5 +1,5 @@
 libmebo_sources = [
-  'libmebo.c',
+  'libmebo.cpp',
 ]
 
 libmebo_headers = [
