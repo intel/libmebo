@@ -3,23 +3,23 @@ libbrc_headers = []
 
 if LIBMEBO_ENABLE_VP9 
   libbrc_sources += [
-      'vp9/libvpx_derived/libvpx_vp9_svc_layercontext.c',
-      'vp9/libvpx_derived/libvpx_vp9_ratectrl.c',
-      'vp9/libvpx_derived/libvpx_vp9_rtc.c',
-      'vp9/libvpx_derived/libvpx_vp9_picklpf.c',
+      'vp9/libvpx_derived/libvpx_vp9_svc_layercontext.cpp',
+      'vp9/libvpx_derived/libvpx_vp9_ratectrl.cpp',
+      'vp9/libvpx_derived/libvpx_vp9_rtc.cpp',
+      'vp9/libvpx_derived/libvpx_vp9_picklpf.cpp',
   ]
 endif
 if LIBMEBO_ENABLE_VP8
   libbrc_sources += [
-      'vp8/libvpx_derived/libvpx_vp8_ratectrl.c',
-      'vp8/libvpx_derived/libvpx_vp8_rtc.c',
+      'vp8/libvpx_derived/libvpx_vp8_ratectrl.cpp',
+      'vp8/libvpx_derived/libvpx_vp8_rtc.cpp',
   ]
 endif
 if LIBMEBO_ENABLE_AV1
   libbrc_sources += [
-      'av1/aom_derived/aom_av1_ratectrl.c',
-      'av1/aom_derived/aom_av1_svc_layercontext.c',
-      'av1/aom_derived/aom_av1_rtc.c',
+      'av1/aom_derived/aom_av1_ratectrl.cpp',
+      'av1/aom_derived/aom_av1_svc_layercontext.cpp',
+      'av1/aom_derived/aom_av1_rtc.cpp',
   ]
 endif
 
@@ -49,7 +49,7 @@ if LIBMEBO_ENABLE_AV1
 endif
 
 ldflags = ['-lm']
-add_global_link_arguments(ldflags, language : 'c')
+add_global_link_arguments(ldflags, language : 'cpp')
 
 libbrc  = static_library('libbrc',
   libbrc_sources  + libbrc_headers,

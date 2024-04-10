@@ -299,7 +299,7 @@ brc_vp9_rate_control_init (LibMeboRateControllerConfig *cfg,
     return LIBMEBO_STATUS_FAILED;
 
   memset (&rtc->cpi_, 0, sizeof (rtc->cpi_));
-  brc_init_rate_control (rtc, (BrcCodecEnginePtr)cfg);
+  brc_init_rate_control (rtc, static_cast< LibMeboRateControllerConfig *>(cfg));
 
   *brc_codec_handler = (BrcCodecEnginePtr)rtc;
   return LIBMEBO_STATUS_SUCCESS;

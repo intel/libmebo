@@ -6,6 +6,8 @@
     ./fake-enc --codec=VP9 --preset=0 --framecount=120
 */
 
+#include <iostream>
+#include <memory>
 #include <stdio.h>
 #include <string.h>
 #include <libmebo.h>
@@ -13,6 +15,12 @@
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
+
+
+#include "../src/Handlers/AV1RateControlHandler.hpp"
+#include "../src/Handlers/LibMeboControlHandler.hpp"
+#include "../src/Handlers/VP8RateControlHandler.hpp"
+#include "../src/Handlers/VP9RateControlHandler.hpp"
 
 #define MaxSpatialLayers 3
 #define MaxTemporalLayers 3
@@ -225,7 +233,7 @@ parse_args(int argc, char **argv)
         break;
       case 2: {
 	  int preset = atoi(optarg);
-	  CodecID id = enc_params.id;
+	  CodecID id = static_cast <CodecID>(enc_params.id);
           if (preset < 0 || preset > SVC_PRESET_START_INDEX) {
             printf ("Unknown preset, Failed \n");
             exit(0);
@@ -246,144 +254,6 @@ parse_args(int argc, char **argv)
   }
 }
 
-// The return value is expressed as a percentage of the average. For example,
-// to allocate no more than 4.5 frames worth of bitrate to a keyframe, the
-// return value is 450.
-uint32_t MaxSizeOfKeyframeAsPercentage(uint32_t optimal_buffer_size,
-                                       uint32_t max_framerate) {
-  // Set max to the optimal buffer level (normalized by target BR),
-  // and scaled by a scale_par.
-  // Max target size = scale_par * optimal_buffer_size * targetBR[Kbps].
-  // This value is presented in percentage of perFrameBw:
-  // perFrameBw = targetBR[Kbps] * 1000 / framerate.
-  // The target in % is as follows:
-  const double target_size_byte_per_frame = optimal_buffer_size * 0.5;
-  const uint32_t target_size_kbyte =
-      target_size_byte_per_frame * max_framerate / 1000;
-  const uint32_t target_size_kbyte_as_percent = target_size_kbyte * 100;
-
-  // Don't go below 3 times the per frame bandwidth.
-  const uint32_t kMinIntraSizePercentage = 300u;
-  if (kMinIntraSizePercentage > target_size_kbyte_as_percent)
-          return kMinIntraSizePercentage;
-  else
-          return target_size_kbyte_as_percent;
-}
-
-static void
-InitLayeredBitrateAlloc (int num_sl,
-    int num_tl, int bitrate)
-{
-  int sl, tl;
-
-  assert (num_sl && num_sl <= MaxSpatialLayers);
-  assert (num_tl && num_tl <= MaxTemporalLayers);
-
-  for (sl=0; sl<num_sl; sl++) {
-    int sl_rate = bitrate/num_sl;
-    for (tl=0; tl<num_tl; tl++) {
-      layered_bitrates[sl][tl] = sl_rate/num_tl;
-    }
-  }
-}
-
-static void
-InitLayeredFramerate (int num_tl, int framerate,
-                      int *ts_rate_decimator)
-{
-  for (int tl = 0; tl < num_tl; tl++) {
-    if (tl == 0)
-      layered_frame_rate [tl] = framerate / ts_rate_decimator[tl];
-    else
-      layered_frame_rate [tl] =
-        (framerate / ts_rate_decimator[tl]) -
-		  (framerate / ts_rate_decimator[tl-1]);
-  }
-}
-
-static int
-GetBitratekBps (int sl_id, int tl_id)
-{
-  return layered_bitrates[sl_id][tl_id];
-}
-
-static int
-libmebo_software_brc_init (
-    LibMeboRateController *rc,
-    LibMeboRateControllerConfig *rc_config)
-{
-  LibMeboStatus status;
-
-  rc_config->width = enc_params.width;
-  rc_config->height = enc_params.height;
-  rc_config->max_quantizer = 63;
-  rc_config->min_quantizer = 0;
-  rc_config->target_bandwidth = enc_params.bitrate;
-  rc_config->buf_initial_sz = 500;
-  rc_config->buf_optimal_sz = 600;;
-  rc_config->buf_sz = 1000;
-  rc_config->undershoot_pct = 50;
-  rc_config->overshoot_pct = 50;
-  rc_config->buf_initial_sz = 500;
-  rc_config->buf_optimal_sz = 600;;
-  rc_config->buf_sz = 1000;
-  rc_config->undershoot_pct = 50;
-  rc_config->overshoot_pct = 50;
-  //Fixme
-  rc_config->max_intra_bitrate_pct = MaxSizeOfKeyframeAsPercentage(
-      rc_config->buf_optimal_sz, enc_params.framerate);
-  rc_config->max_intra_bitrate_pct = 0;
-  rc_config->framerate = enc_params.framerate;
-
-  rc_config->max_quantizers[0] = rc_config->max_quantizer;
-  rc_config->min_quantizers[0] = rc_config->min_quantizer;
-
-  rc_config->ss_number_layers = enc_params.num_sl;
-  rc_config->ts_number_layers = enc_params.num_tl;
-
-  switch (enc_params.num_sl) {
-      case 1:
-        rc_config->scaling_factor_num[0] = 1;
-        rc_config->scaling_factor_den[0] = 1;
-        break;
-      case 2:
-        rc_config->scaling_factor_num[0] = 1;
-        rc_config->scaling_factor_den[0] = 2;
-        rc_config->scaling_factor_num[1] = 1;
-        rc_config->scaling_factor_den[1] = 1;
-        break;
-      case 3:
-        rc_config->scaling_factor_num[0] = 1;
-        rc_config->scaling_factor_den[0] = 4;
-        rc_config->scaling_factor_num[1] = 1;
-        rc_config->scaling_factor_den[1] = 2;
-        rc_config->scaling_factor_num[2] = 1;
-        rc_config->scaling_factor_den[2] = 1;
-        break;
-      default:
-        break;
-  }
-  for (unsigned int sl = 0; sl < enc_params.num_sl; sl++) {
-    int bitrate_sum = 0;
-    for (unsigned int tl = 0; tl < enc_params.num_tl; tl++) {
-      const int layer_id = LAYER_IDS_TO_IDX(sl, tl, enc_params.num_tl);
-      rc_config->max_quantizers[layer_id] = rc_config->max_quantizer;
-      rc_config->min_quantizers[layer_id] = rc_config->min_quantizer;
-      bitrate_sum += GetBitratekBps(sl, tl);
-      rc_config->layer_target_bitrate[layer_id] = bitrate_sum;
-      rc_config->ts_rate_decimator[tl] = 1u << (enc_params.num_tl - tl - 1);
-    }
-    InitLayeredFramerate (enc_params.num_tl,enc_params.framerate,
-		    rc_config->ts_rate_decimator);
-  }
-
-  status = libmebo_rate_controller_init (rc, rc_config);
-  if (status != LIBMEBO_STATUS_SUCCESS)
-    return 0;
-
-  return 1;
-}
-
 static void display_encode_status (unsigned int bitstream_size) {
 
   printf ("======= Encoder Input Configuration ======= \n");
@@ -393,7 +263,7 @@ static void display_encode_status (unsigned int bitstream_size) {
 		  "width      = %d \n"
 		  "height     = %d \n"
 		  "framecount = %d \n",
-		  get_codec_id_string (enc_params.id),
+		  get_codec_id_string (static_cast <CodecID>(enc_params.id)),
 		  enc_params.bitrate,
 		  enc_params.framerate,
 		  enc_params.width,
@@ -495,7 +365,7 @@ get_layer_ids (int frame_count, int num_sl, int num_tl,
 }
 
 static void
-start_virtual_encode (LibMeboRateController *rc)
+start_virtual_encode (std::unique_ptr <Libmebo_brc> &brc, LibMeboRateController *rc, LibMeboRateControllerConfig rc_config)
 {
    int i, qp = 0;
    int key_frame_period = 30;
@@ -510,7 +380,8 @@ start_virtual_encode (LibMeboRateController *rc)
    unsigned int svc_preset = 0;
    int frame_count = 0;
    unsigned int prev_is_key = 0;
-
+   
+   assert(brc != nullptr);
    if (verbose)
      printf ("=======Fake Encode starts ==============\n");
 
@@ -584,7 +455,7 @@ start_virtual_encode (LibMeboRateController *rc)
       dynamic_bitrates[0] = libmebo_rc_config.target_bandwidth; 
       libmebo_rc_config.target_bandwidth /= 8;
       dynamic_bitrates[1] = libmebo_rc_config.target_bandwidth;
-      status = libmebo_rate_controller_update_config (rc, &libmebo_rc_config); 
+      status = brc->update_config(rc, &libmebo_rc_config);
       assert (status == LIBMEBO_STATUS_SUCCESS);
      }
 
@@ -593,13 +464,10 @@ start_virtual_encode (LibMeboRateController *rc)
      //Set spatial layer id
      rc_frame_params.spatial_layer_id =  spatial_id;
      rc_frame_params.temporal_layer_id = temporal_id;
-
-     status = libmebo_rate_controller_compute_qp (rc, rc_frame_params);
+     status = brc->compute_qp(rc, &rc_frame_params);
      assert (status == LIBMEBO_STATUS_SUCCESS);
-
-     status  = libmebo_rate_controller_get_qp (libmebo_rc, &qp);
+     status  = brc->get_qp(rc, &qp);
      assert (status == LIBMEBO_STATUS_SUCCESS);
-
      if (verbose)
        printf ("QP = %d \n", qp);
 
@@ -626,8 +494,7 @@ start_virtual_encode (LibMeboRateController *rc)
 
      if (verbose)
        printf ("PostEncodeBufferSize = %d \n",buf_size);
-
-     status = libmebo_rate_controller_post_encode_update (rc, buf_size);
+     status = brc->post_encode_update(rc, buf_size);
      assert (status == LIBMEBO_STATUS_SUCCESS);
 
      // Calculate per layer stream size
@@ -668,28 +535,41 @@ ValidateInput ()
   }
 }
 
-void
-get_codec_and_algo_id (CodecID id, int *codec_id, int *algo_id)
+class Libmebo_brc_factory
 {
-  switch (id)
-  {
-    case VP8_ID:
-      *codec_id = LIBMEBO_CODEC_VP8;
-      *algo_id = LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8;
-      break;
-    case VP9_ID:
-      *codec_id = LIBMEBO_CODEC_VP9;
-      *algo_id = LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9;
-      break;
-    case AV1_ID:
-      *codec_id = LIBMEBO_CODEC_VP8;
-      *algo_id = LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1;
-      break;
-    default:
-      *codec_id = LIBMEBO_CODEC_UNKNOWN;
-      *algo_id = LIBMEBO_BRC_ALGORITHM_UNKNOWN;
-  }
-}
+  public: 
+       static std::unique_ptr <Libmebo_brc> create(unsigned int id )
+       {
+         LibMeboCodecType codecType;
+         switch(static_cast<LibMeboCodecType>(id))
+         {
+           case LIBMEBO_CODEC_VP8:
+               codecType = LIBMEBO_CODEC_VP8;
+               break;
+           case LIBMEBO_CODEC_VP9:
+               codecType = LIBMEBO_CODEC_VP9;
+               break;
+           case LIBMEBO_CODEC_AV1:
+               codecType = LIBMEBO_CODEC_AV1;
+               break;
+          }
+
+         switch(codecType)
+         {
+             case LIBMEBO_CODEC_VP8:
+                  return std::make_unique<Libmebo_brc_VP8>(static_cast<LibMeboBrcAlgorithmID>(id));//this is calling construcotr.
+             case LIBMEBO_CODEC_VP9:
+                  return std::make_unique<Libmebo_brc_VP9>(static_cast<LibMeboBrcAlgorithmID>(id));
+              case LIBMEBO_CODEC_AV1:
+                  return std::make_unique<Libmebo_brc_AV1>(static_cast<LibMeboBrcAlgorithmID>(id));
+              case LIBMEBO_CODEC_UNKNOWN:
+                  std::cout<<"pass correct codec. AV1, VP9, VP8:\n";
+                  break;
+         }
+
+       }
+};
+
 
 int main (int argc,char **argv)
 {
@@ -702,26 +582,20 @@ int main (int argc,char **argv)
 
   ValidateInput ();
 
-  //Init layered bitrate allocation estimation
-  InitLayeredBitrateAlloc (enc_params.num_sl, enc_params.num_tl, enc_params.bitrate);
-
-  //Create the rate-controller
-  get_codec_and_algo_id (enc_params.id, &codec_type, &algo_id);
-
-  libmebo_rc = libmebo_rate_controller_new (codec_type, algo_id);
-  if (!libmebo_rc) {
-    printf ("Failed to create the rate-controller \n");
-    return -1;
+  std::unique_ptr <Libmebo_brc> brc  = Libmebo_brc_factory::create(static_cast<LibMeboBrcAlgorithmID>(enc_params. id));
+  
+  if (brc !=nullptr)
+  {
+      std::cout<<"controller->init\n";  
+      LibMeboStatus status  = LIBMEBO_STATUS_SUCCESS;
+      libmebo_rc = (LibMeboRateController *) malloc (sizeof(LibMeboRateController));
+      if (!libmebo_rc) {
+        fprintf(stderr, "Failed allocation for LibMeboRateController \n");
+        return NULL;
+      }
+      brc->init(libmebo_rc, &libmebo_rc_config);
+      start_virtual_encode (brc, libmebo_rc, libmebo_rc_config);
   }
-
-  if (!libmebo_software_brc_init (libmebo_rc, &libmebo_rc_config)) {
-    printf ("Failed to init brc: \n");
-    return -1;
-  }
-
-  start_virtual_encode (libmebo_rc);
-
-  libmebo_rate_controller_free (libmebo_rc);
 
   return 0;
 }
