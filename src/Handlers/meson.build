@@ -17,7 +17,11 @@ libbrc_controller_headers +=[
     'VP9RateControlHandler.hpp'
 ]
 
-libaom_av1_rc_dir = join_paths(meson.current_source_dir(), 'av1', 'aom_derived', 'libs/')
+fs = import ('fs')
+
+current_dir = meson.current_source_dir()
+parent_dir = fs.parent(current_dir)
+libaom_av1_rc_dir = join_paths(parent_dir, 'brc', 'av1', 'aom_derived', 'libs/')
 libaom_av1_rc = meson.get_compiler('cpp').find_library('aom_av1_rc', dirs:libaom_av1_rc_dir, required :false)
 
 incdir = include_directories('../brc/av1/aom_derived/lib_header')
