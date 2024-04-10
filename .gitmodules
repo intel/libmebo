@@ -1,0 +1,3 @@
+[submodule "aom"]
+	path = aom
+	url = https://aomedia.googlesource.com/aom
