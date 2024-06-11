@@ -13,7 +13,7 @@
 #define LIBMEBO_VP8_RATECTRL_RTC_H
 
 #include "libvpx_vp8_common.h"
-#include "../../../lib/libmebo.h"
+#include "../../../lib/libmebo.hpp"
 
 // This interface allows using VP8 real-time rate control without initializing
 // the encoder.
