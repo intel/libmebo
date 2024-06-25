@@ -1,3 +1,6 @@
 [submodule "aom"]
 	path = aom
 	url = https://aomedia.googlesource.com/aom
+[submodule "libvpx"]
+	path = libvpx
+	url = https://chromium.googlesource.com/webm/libvpx
