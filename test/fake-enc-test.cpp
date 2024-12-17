@@ -380,8 +380,9 @@
     unsigned int svc_preset = 0;
     int frame_count = 0;
     unsigned int prev_is_key = 0;
-    
+    std::cout<<"DEUBG -11 inside fake encode "<<std::endl;
     assert(brc != nullptr);
+    std::cout<<"DEUBG -12 inside fake encode "<<std::endl;
     if (verbose)
       printf ("=======Fake Encode starts ==============\n");
 
@@ -392,7 +393,7 @@
 
     //Account spatial svc in frame_count
     frame_count = enc_params.framecount * enc_params.num_sl;
-
+    std::cout<<"DEUBG -11 inside fake encode frame_count - "<<frame_count<<" , "<<std::endl;
     srand(time(NULL));
     for (i = 0; i < frame_count; i++) {
       LibMeboStatus status;
@@ -571,7 +572,7 @@
         }
   };
 
-
+LibMeboRateController * rc1;
   int main (int argc,char **argv)
   {
     int codec_type, algo_id;
@@ -580,12 +581,12 @@
       return -1;
     }
     parse_args(argc, (char **)argv);
-
+   std::cout<<"DEBUG 0 inside main -....\n";
     ValidateInput ();
     printf("started in fake test main\n");
-
+    std::cout<<"DEBUG 0.1 inside main calling create,constructore. -....\n";
     std::unique_ptr <Libmebo_brc> brc  = Libmebo_brc_factory::create(static_cast<LibMeboBrcAlgorithmID>(enc_params. id));
-
+    
     if (brc !=nullptr)
     {
         LibMeboStatus status  = LIBMEBO_STATUS_SUCCESS;
@@ -594,7 +595,9 @@
           fprintf(stderr, "Failed allocation for LibMeboRateController \n");
           return NULL;
         }
-        brc->init(libmebo_rc, &libmebo_rc_config);
+        std::cout<<"DEBUG 8.1 calling brc init -....\n";
+        rc1 = brc->init(libmebo_rc, &libmebo_rc_config);
+        std::cout<<"DEBUG 10.1 calling start_virtual_encode -....\n";
         start_virtual_encode (brc, libmebo_rc, libmebo_rc_config);
     }
 

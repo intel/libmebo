@@ -1,11 +1,14 @@
 #include "AV1RateControlHandler.hpp"
 #include <dlfcn.h>
+#include <iostream>
+#include <cstring>
 
 #include "../../aom/av1/ratectrl_rtc.h"
 
 Libmebo_brc_AV1::Libmebo_brc_AV1(LibMeboBrcAlgorithmID algo_id)
     : Libmebo_brc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr),
       ptrCreateAV1Controller(nullptr) {
+  std::cout<<"inside av1 constructor \n";
   enc_params_libmebo.num_sl = 1;
   enc_params_libmebo.num_tl = 1;
   enc_params_libmebo.bitrate = 288; // in kbps.
@@ -24,59 +27,62 @@ Libmebo_brc_AV1::~Libmebo_brc_AV1() {
     dlclose(handle);
   }
 }
-
-aom::AV1RateControlRtcConfig *config;
+#define av1aom_zero(dest) memset(&(dest), 0, sizeof(dest))
+AomAV1RateControlRtcConfig *config;
 void *controller;
 
 int Libmebo_brc_AV1::InitSymbolsFromLiray() {
-  char path[] = "/lib64/libaom_av1_rc.so"; // this needs to be at config time.
+  char path[] = "/home/pradeep4/Documents/pradeep/libmebo_push/libmebo/aom/build/libaom_av1_rc.so"; // this needs to be at config time.
   handle = dlopen(path, RTLD_LAZY);
   if (!handle) {
     return kMainHandleLibError;
   }
 
+  std::cout<<"lib opened ----"<<std::endl;
+
+ std::cout<<"DEBUG -1  Openinng sym  av1_ratecontrol_rtc_create----"<<std::endl; 
   ptrCreateAV1Controller =
-      (createAV1Controller_t)dlsym(handle, "create_av1_ratecontrol_rtc");
+      (createAV1Controller_t)dlsym(handle, "av1_ratecontrol_rtc_create");
   if (!ptrCreateAV1Controller) {
     return kAv1CreateSymbLoadError;
   }
+  std::cout<<"DEBUG -2  Openinng sym  av1_ratecontrol_rtc_init_ratecontrol_config----"<<std::endl;  
+  ptrInitConfigFunc = (InitRateControlConfigFunc)dlsym(
+      handle, "av1_ratecontrol_rtc_init_ratecontrol_config");
 
-  create_av1_ratecontrol_config = (create_av1_rate_control_config_t)dlsym(
-      handle, "create_av1_ratecontrol_config");
-
-  if (!create_av1_ratecontrol_config) {
-    return kAV1RateCtrlConfigSymbLoadError;
+  if (!ptrInitConfigFunc) {
+    return kAV1RateCtrlInitConfigSymbLoadError;
   }
-
+  std::cout<<"DEBUG -3  Openinng sym  av1_ratecontrol_rtc_update----"<<std::endl; 
   ptrUpdateRateControl_AV1 =
-      (UpdateRateControl_AV1_t)dlsym(handle, "update_ratecontrol_av1");
+      (UpdateRateControl_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_update");
   if (!ptrUpdateRateControl_AV1) {
     return kUpdateRateControlSymbLoadError;
   }
-
+  std::cout<<"DEBUG -4  Openinng sym  av1_ratecontrol_rtc_compute_qp----"<<std::endl;
   ptrComputeQP_AV1 =
-      (ComputeQP_AV1_t)dlsym(handle, "compute_qp_ratecontrol_av1");
+      (ComputeQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_compute_qp");
   if (!ptrComputeQP_AV1) {
     return kCompueQPSymbLoadError;
   }
-
+ std::cout<<"DEBUG -5  Openinng sym  av1_ratecontrol_rtc_post_encode_update----"<<std::endl;
   ptrPostEncodeUpdate_AV1 = (PostEncodeUpdate_AV1_t)dlsym(
-      handle, "post_encode_update_ratecontrol_av1");
+      handle, "av1_ratecontrol_rtc_post_encode_update");
   if (!ptrPostEncodeUpdate_AV1) {
     return kPostEncodeSymbLoadError;
-  }
-
-  ptrGetQP_AV1 = (GetQP_AV1_t)dlsym(handle, "get_qp_ratecontrol_av1");
+  } 
+  std::cout<<"DEBUG -6  Openinng sym  av1_ratecontrol_rtc_get_qp----"<<std::endl;
+  ptrGetQP_AV1 = (GetQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_get_qp");
   if (!ptrGetQP_AV1) {
     return kGetQpSymbLoadError;
   }
-
+ std::cout<<"DEBUG -7  Openinng sym  av1_ratecontrol_rtc_get_loop_filter_level----"<<std::endl;
   ptrGetLoopfilterLevel_AV1 = (GetLoopfilterLevel_AV1_t)dlsym(
-      handle, "get_loop_filter_level_ratecontrol_av1");
+      handle, "av1_ratecontrol_rtc_get_loop_filter_level");
   if (!ptrGetLoopfilterLevel_AV1) {
     return kGetLoopFilterSymbError;
   }
-
+std::cout<<"DEBUG -8  Openinng  all sym  Success...."<<std::endl;
   return kNoError;
 }
 
@@ -90,7 +96,11 @@ Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
   }
   libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
 
-  config = create_av1_ratecontrol_config();
+  memset (config, 0, sizeof(config));
+
+  ptrInitConfigFunc(config);
+
+ 
   if (config == nullptr)
     return nullptr;
 
@@ -98,6 +108,7 @@ Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
   constexpr int kMaxQP = 56;
   config->width = 640;
   config->height = 480;
+  config->is_screen = false;
   // third_party/webrtc/modules/video_coding/codecs/av1/libaom_av1_encoder.cc
   config->max_quantizer = kMaxQP;
   config->min_quantizer = kMinQP;
@@ -111,10 +122,15 @@ Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
   config->max_intra_bitrate_pct = 300;
   config->max_inter_bitrate_pct = 50;
   config->framerate = 60;
-  config->layer_target_bitrate[0] = 800000 / 1000;
-
+  av1aom_zero(config->layer_target_bitrate);
+  config->layer_target_bitrate[0] = (config->target_bandwidth);
+  av1aom_zero(config->ts_rate_decimator);
   config->ts_rate_decimator[0] = 1;
   config->aq_mode = 1;
+  av1aom_zero(config->max_quantizers);
+  av1aom_zero(config->min_quantizers);
+  av1aom_zero(config->scaling_factor_num);
+  av1aom_zero(config->scaling_factor_den);
   config->ss_number_layers = 1;
   config->ts_number_layers = 1;
   config->max_quantizers[0] = kMaxQP;
@@ -122,7 +138,7 @@ Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
   config->scaling_factor_num[0] = 1;
   config->scaling_factor_den[0] = 1;
   config->frame_drop_thresh = 30;
-  config->max_consec_drop = 8;
+  config->max_consec_drop_ms = 8;
 
   controller = ptrCreateAV1Controller(*config);
   if (controller == nullptr)
@@ -166,9 +182,9 @@ Libmebo_brc_AV1::compute_qp(LibMeboRateController *rc,
   aom::AV1FrameParamsRTC frame_params_aom;
 
   if (rc_frame_params->frame_type == LIBMEBO_KEY_FRAME)
-    frame_params_aom.frame_type = aom::kKeyFrame;
+    frame_params_aom.frame_type = kKeyFrame;
   else
-    frame_params_aom.frame_type = aom::kInterFrame;
+    frame_params_aom.frame_type = kInterFrame;
 
   ptrComputeQP_AV1(controller, frame_params_aom);
   return status;
@@ -190,7 +206,7 @@ LibMeboStatus Libmebo_brc_AV1::get_loop_filter_level(LibMeboRateController *rc,
   if (!rc)
     return LIBMEBO_STATUS_ERROR;
 
-  aom::AV1LoopfilterLevel loop_filter_level;
+  AV1LoopfilterLevel loop_filter_level;
 
   loop_filter_level = ptrGetLoopfilterLevel_AV1(controller);
 
