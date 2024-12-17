@@ -206,7 +206,7 @@ LibMeboStatus Libmebo_brc_AV1::get_loop_filter_level(LibMeboRateController *rc,
   if (!rc)
     return LIBMEBO_STATUS_ERROR;
 
-  AV1LoopfilterLevel loop_filter_level;
+  AomAV1LoopfilterLevel loop_filter_level;
 
   loop_filter_level = ptrGetLoopfilterLevel_AV1(controller);
 
