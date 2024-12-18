@@ -140,11 +140,9 @@ Libmebo_brc::init(LibMeboRateController *rc,
       rc_config->ts_rate_decimator[tl] =
           1u << (enc_params_libmebo.num_tl - tl - 1);
     }
-    std::cout << "DEBUG -9 init done - success.... : "  << std::endl;
     InitLayeredFramerate(enc_params_libmebo.num_tl,
                          enc_params_libmebo.framerate,
                          rc_config->ts_rate_decimator);
   }
-  std::cout << "DEBUG -10 returning rc - success.... : "  << std::endl;
   return rc;
 }
