@@ -33,7 +33,8 @@ class Libmebo_brc_factory
               case LIBMEBO_CODEC_AV1:
                   return std::make_unique<Libmebo_brc_AV1>(static_cast<LibMeboBrcAlgorithmID>(id));
               case LIBMEBO_CODEC_UNKNOWN:
-                  break;
+                    return nullptr;
+                    break;
          }
 
        }

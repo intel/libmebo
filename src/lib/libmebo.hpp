@@ -401,33 +401,6 @@ typedef struct _LibMeboRateController {
   uint32_t _libmebo_reserved[32];
 } LibMeboRateController;
 
-
-
-/*these below API are exported using extern "C" to cleint side*/
-LibMeboRateController *
-libmebo_create_rate_controller(LibMeboCodecType CodecType,
-                               LibMeboBrcAlgorithmID algo_id);
-void libmebo_release_rate_controller(LibMeboRateController *rc);
-
-LibMeboRateController *
-libmebo_init_rate_controller(LibMeboRateController *rc,
-                             LibMeboRateControllerConfig *rc_config);
-
-LibMeboStatus
-libmebo_update_rate_controller_config(LibMeboRateController *rc,
-                                      LibMeboRateControllerConfig *rc_cfg);
-LibMeboStatus libmebo_post_encode_update(LibMeboRateController *rc,
-                                         uint64_t encoded_frame_size);
-LibMeboStatus libmebo_compute_qp(LibMeboRateController *rc,
-                                 LibMeboRCFrameParams *rc_frame_params);
-
-LibMeboStatus libmebo_get_qp(LibMeboRateController *rc, int *qp);
-
-LibMeboStatus libmebo_get_loop_filter_level(LibMeboRateController *rc,
-                                            int *filter_level);
-
-void *create_brc_factory(unsigned int id);
-void destroy_brc_factory(void *brc);
 #ifdef __cplusplus
 }
 #endif
