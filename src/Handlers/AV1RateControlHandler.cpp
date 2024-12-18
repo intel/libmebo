@@ -8,7 +8,6 @@
 Libmebo_brc_AV1::Libmebo_brc_AV1(LibMeboBrcAlgorithmID algo_id)
     : Libmebo_brc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr),
       ptrCreateAV1Controller(nullptr) {
-  std::cout<<"inside av1 constructor \n";
   enc_params_libmebo.num_sl = 1;
   enc_params_libmebo.num_tl = 1;
   enc_params_libmebo.bitrate = 288; // in kbps.
@@ -38,68 +37,55 @@ int Libmebo_brc_AV1::InitSymbolsFromLiray() {
     return kMainHandleLibError;
   }
 
-  std::cout<<"lib opened ----"<<std::endl;
-
- std::cout<<"DEBUG -1  Openinng sym  av1_ratecontrol_rtc_create----"<<std::endl; 
   ptrCreateAV1Controller =
       (createAV1Controller_t)dlsym(handle, "av1_ratecontrol_rtc_create");
   if (!ptrCreateAV1Controller) {
     return kAv1CreateSymbLoadError;
   }
-  std::cout<<"DEBUG -2  Openinng sym  av1_ratecontrol_rtc_init_ratecontrol_config----"<<std::endl;  
   ptrInitConfigFunc = (InitRateControlConfigFunc)dlsym(
       handle, "av1_ratecontrol_rtc_init_ratecontrol_config");
 
   if (!ptrInitConfigFunc) {
     return kAV1RateCtrlInitConfigSymbLoadError;
   }
-  std::cout<<"DEBUG -3  Openinng sym  av1_ratecontrol_rtc_update----"<<std::endl; 
   ptrUpdateRateControl_AV1 =
       (UpdateRateControl_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_update");
   if (!ptrUpdateRateControl_AV1) {
     return kUpdateRateControlSymbLoadError;
   }
-  std::cout<<"DEBUG -4  Openinng sym  av1_ratecontrol_rtc_compute_qp----"<<std::endl;
   ptrComputeQP_AV1 =
       (ComputeQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_compute_qp");
   if (!ptrComputeQP_AV1) {
     return kCompueQPSymbLoadError;
   }
- std::cout<<"DEBUG -5  Openinng sym  av1_ratecontrol_rtc_post_encode_update----"<<std::endl;
   ptrPostEncodeUpdate_AV1 = (PostEncodeUpdate_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_post_encode_update");
   if (!ptrPostEncodeUpdate_AV1) {
     return kPostEncodeSymbLoadError;
   } 
-  std::cout<<"DEBUG -6  Openinng sym  av1_ratecontrol_rtc_get_qp----"<<std::endl;
   ptrGetQP_AV1 = (GetQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_get_qp");
   if (!ptrGetQP_AV1) {
     return kGetQpSymbLoadError;
   }
- std::cout<<"DEBUG -7  Openinng sym  av1_ratecontrol_rtc_get_loop_filter_level----"<<std::endl;
   ptrGetLoopfilterLevel_AV1 = (GetLoopfilterLevel_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_get_loop_filter_level");
   if (!ptrGetLoopfilterLevel_AV1) {
     return kGetLoopFilterSymbError;
   }
-std::cout<<"DEBUG -8  Openinng  all sym  Success...."<<std::endl;
   return kNoError;
 }
 
 LibMeboRateController *
 Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
                       LibMeboRateControllerConfig *libmebo_rc_config) {
-
   int result = InitSymbolsFromLiray();
   if (result != kNoError) {
     return nullptr;
   }
   libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
 
-  memset (config, 0, sizeof(config));
-
+  memset (&config, 0, sizeof(config));
   ptrInitConfigFunc(config);
-
  
   if (config == nullptr)
     return nullptr;

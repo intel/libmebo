@@ -380,9 +380,7 @@
     unsigned int svc_preset = 0;
     int frame_count = 0;
     unsigned int prev_is_key = 0;
-    std::cout<<"DEUBG -11 inside fake encode "<<std::endl;
     assert(brc != nullptr);
-    std::cout<<"DEUBG -12 inside fake encode "<<std::endl;
     if (verbose)
       printf ("=======Fake Encode starts ==============\n");
 
@@ -393,7 +391,6 @@
 
     //Account spatial svc in frame_count
     frame_count = enc_params.framecount * enc_params.num_sl;
-    std::cout<<"DEUBG -11 inside fake encode frame_count - "<<frame_count<<" , "<<std::endl;
     srand(time(NULL));
     for (i = 0; i < frame_count; i++) {
       LibMeboStatus status;
@@ -562,7 +559,6 @@
               case LIBMEBO_CODEC_VP9:
                     return std::make_unique<Libmebo_brc_VP9>(static_cast<LibMeboBrcAlgorithmID>(id));
                 case LIBMEBO_CODEC_AV1:
-
                     return std::make_unique<Libmebo_brc_AV1>(static_cast<LibMeboBrcAlgorithmID>(id));
                 case LIBMEBO_CODEC_UNKNOWN:
                     std::cout<<"pass correct codec. AV1, VP9, VP8:\n";
@@ -581,11 +577,11 @@ LibMeboRateController * rc1;
       return -1;
     }
     parse_args(argc, (char **)argv);
-   std::cout<<"DEBUG 0 inside main -....\n";
     ValidateInput ();
     printf("started in fake test main\n");
-    std::cout<<"DEBUG 0.1 inside main calling create,constructore. -....\n";
-    std::unique_ptr <Libmebo_brc> brc  = Libmebo_brc_factory::create(static_cast<LibMeboBrcAlgorithmID>(enc_params. id));
+    std::unique_ptr <Libmebo_brc> brc  = 
+    Libmebo_brc_factory::create(static_cast<LibMeboBrcAlgorithmID>
+    (enc_params. id));
     
     if (brc !=nullptr)
     {
@@ -595,9 +591,7 @@ LibMeboRateController * rc1;
           fprintf(stderr, "Failed allocation for LibMeboRateController \n");
           return NULL;
         }
-        std::cout<<"DEBUG 8.1 calling brc init -....\n";
         rc1 = brc->init(libmebo_rc, &libmebo_rc_config);
-        std::cout<<"DEBUG 10.1 calling start_virtual_encode -....\n";
         start_virtual_encode (brc, libmebo_rc, libmebo_rc_config);
     }
 
