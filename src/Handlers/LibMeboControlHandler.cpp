@@ -8,9 +8,9 @@ extern "C" {
 
 Libmebo_brc::Libmebo_brc(LibMeboCodecType codec_type_in,
                          LibMeboBrcAlgorithmID algo_id_in) {
-  /* will init encparams based on algo id*/
   codec_type = codec_type_in;
-  algo_id = algo_id_in;
+  algo_id = algo_id_in; // algo id is not used now after going for direct repos
+  //other members will init later
 }
 
 uint32_t
@@ -78,13 +78,13 @@ Libmebo_brc::init(LibMeboRateController *rc,
   rc_config->target_bandwidth = enc_params_libmebo.bitrate;
   rc_config->buf_initial_sz = 500;
   rc_config->buf_optimal_sz = 600;
-  ;
+  
   rc_config->buf_sz = 1000;
   rc_config->undershoot_pct = 50;
   rc_config->overshoot_pct = 50;
   rc_config->buf_initial_sz = 500;
   rc_config->buf_optimal_sz = 600;
-  ;
+  
   rc_config->buf_sz = 1000;
   rc_config->undershoot_pct = 50;
   rc_config->overshoot_pct = 50;

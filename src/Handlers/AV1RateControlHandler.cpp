@@ -26,13 +26,16 @@ Libmebo_brc_AV1::~Libmebo_brc_AV1() {
     dlclose(handle);
   }
 }
+
 #define av1aom_zero(dest) memset(&(dest), 0, sizeof(dest))
 AomAV1RateControlRtcConfig *config;
 void *controller;
 
 int Libmebo_brc_AV1::InitSymbolsFromLibrary() {
+
   char path[] = "/home/pradeep4/Documents/pradeep/libmebo_push/libmebo/aom/"
                 "build/libaom_av1_rc.so"; // this needs to be at config time.
+
   handle = dlopen(path, RTLD_LAZY);
   if (!handle) {
     return kMainHandleLibError;
@@ -43,36 +46,42 @@ int Libmebo_brc_AV1::InitSymbolsFromLibrary() {
   if (!ptrCreateAV1Controller) {
     return kAv1CreateSymbLoadError;
   }
+
   ptrInitConfigFunc = (InitRateControlConfigFunc)dlsym(
       handle, "av1_ratecontrol_rtc_init_ratecontrol_config");
-
   if (!ptrInitConfigFunc) {
     return kAV1RateCtrlInitConfigSymbLoadError;
   }
+
   ptrUpdateRateControl_AV1 =
       (UpdateRateControl_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_update");
   if (!ptrUpdateRateControl_AV1) {
     return kUpdateRateControlSymbLoadError;
   }
+
   ptrComputeQP_AV1 =
       (ComputeQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_compute_qp");
   if (!ptrComputeQP_AV1) {
     return kCompueQPSymbLoadError;
   }
+
   ptrPostEncodeUpdate_AV1 = (PostEncodeUpdate_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_post_encode_update");
   if (!ptrPostEncodeUpdate_AV1) {
     return kPostEncodeSymbLoadError;
   }
+
   ptrGetQP_AV1 = (GetQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_get_qp");
   if (!ptrGetQP_AV1) {
     return kGetQpSymbLoadError;
   }
+
   ptrGetLoopfilterLevel_AV1 = (GetLoopfilterLevel_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_get_loop_filter_level");
   if (!ptrGetLoopfilterLevel_AV1) {
     return kGetLoopFilterSymbError;
   }
+
   return kNoError;
 }
 
@@ -83,6 +92,7 @@ Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
   if (result != kNoError) {
     return nullptr;
   }
+
   libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
 
   memset(&config, 0, sizeof(config));

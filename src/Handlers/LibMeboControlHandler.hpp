@@ -7,7 +7,7 @@ extern "C" {
 #define MaxSpatialLayers 3
 #define MaxTemporalLayers 3
 
-struct EncParams_1 {
+struct EncParams_1ibmebo {
   unsigned int preset;
   unsigned int id;
   unsigned int bitrate; // in kbps
@@ -49,7 +49,7 @@ public:
 protected:
   LibMeboCodecType codec_type;
   LibMeboBrcAlgorithmID algo_id;
-  EncParams_1 enc_params_libmebo;
+  EncParams_1ibmebo enc_params_libmebo;
   int layered_frame_rate[MaxTemporalLayers];
   int layered_bitrates[MaxSpatialLayers][MaxTemporalLayers];
 };
