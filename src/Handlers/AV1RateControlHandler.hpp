@@ -56,7 +56,6 @@ private:
 
   typedef void (*InitRateControlConfigFunc)(
       struct AomAV1RateControlRtcConfig *config);
-  create_av1_rate_control_config_t create_av1_ratecontrol_config;
   createAV1Controller_t ptrCreateAV1Controller;
   UpdateRateControl_AV1_t ptrUpdateRateControl_AV1;
   GetQP_AV1_t ptrGetQP_AV1;
