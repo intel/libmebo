@@ -1,7 +1,7 @@
 #include "AV1RateControlHandler.hpp"
+#include <cstring>
 #include <dlfcn.h>
 #include <iostream>
-#include <cstring>
 
 #include "../../aom/av1/ratectrl_rtc.h"
 
@@ -30,8 +30,9 @@ Libmebo_brc_AV1::~Libmebo_brc_AV1() {
 AomAV1RateControlRtcConfig *config;
 void *controller;
 
-int Libmebo_brc_AV1::InitSymbolsFromLiray() {
-  char path[] = "/home/pradeep4/Documents/pradeep/libmebo_push/libmebo/aom/build/libaom_av1_rc.so"; // this needs to be at config time.
+int Libmebo_brc_AV1::InitSymbolsFromLibrary() {
+  char path[] = "/home/pradeep4/Documents/pradeep/libmebo_push/libmebo/aom/"
+                "build/libaom_av1_rc.so"; // this needs to be at config time.
   handle = dlopen(path, RTLD_LAZY);
   if (!handle) {
     return kMainHandleLibError;
@@ -62,7 +63,7 @@ int Libmebo_brc_AV1::InitSymbolsFromLiray() {
       handle, "av1_ratecontrol_rtc_post_encode_update");
   if (!ptrPostEncodeUpdate_AV1) {
     return kPostEncodeSymbLoadError;
-  } 
+  }
   ptrGetQP_AV1 = (GetQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_get_qp");
   if (!ptrGetQP_AV1) {
     return kGetQpSymbLoadError;
@@ -78,53 +79,17 @@ int Libmebo_brc_AV1::InitSymbolsFromLiray() {
 LibMeboRateController *
 Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
                       LibMeboRateControllerConfig *libmebo_rc_config) {
-  int result = InitSymbolsFromLiray();
+  int result = InitSymbolsFromLibrary();
   if (result != kNoError) {
     return nullptr;
   }
   libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
 
-  memset (&config, 0, sizeof(config));
+  memset(&config, 0, sizeof(config));
   ptrInitConfigFunc(config);
- 
+
   if (config == nullptr)
     return nullptr;
-
-  constexpr int kMinQP = 10;
-  constexpr int kMaxQP = 56;
-  config->width = 640;
-  config->height = 480;
-  config->is_screen = false;
-  // third_party/webrtc/modules/video_coding/codecs/av1/libaom_av1_encoder.cc
-  config->max_quantizer = kMaxQP;
-  config->min_quantizer = kMinQP;
-
-  config->buf_initial_sz = 600;
-  config->buf_optimal_sz = 500;
-  config->target_bandwidth = 800000 / 1000;
-  config->buf_sz = 1000;
-  config->undershoot_pct = 25;
-  config->overshoot_pct = 50;
-  config->max_intra_bitrate_pct = 300;
-  config->max_inter_bitrate_pct = 50;
-  config->framerate = 60;
-  av1aom_zero(config->layer_target_bitrate);
-  config->layer_target_bitrate[0] = (config->target_bandwidth);
-  av1aom_zero(config->ts_rate_decimator);
-  config->ts_rate_decimator[0] = 1;
-  config->aq_mode = 1;
-  av1aom_zero(config->max_quantizers);
-  av1aom_zero(config->min_quantizers);
-  av1aom_zero(config->scaling_factor_num);
-  av1aom_zero(config->scaling_factor_den);
-  config->ss_number_layers = 1;
-  config->ts_number_layers = 1;
-  config->max_quantizers[0] = kMaxQP;
-  config->min_quantizers[0] = kMinQP;
-  config->scaling_factor_num[0] = 1;
-  config->scaling_factor_den[0] = 1;
-  config->frame_drop_thresh = 30;
-  config->max_consec_drop_ms = 8;
 
   controller = ptrCreateAV1Controller(*config);
   if (controller == nullptr)

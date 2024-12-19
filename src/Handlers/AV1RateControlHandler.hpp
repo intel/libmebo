@@ -34,25 +34,28 @@ public:
   LibMeboStatus get_qp(LibMeboRateController *rc, int *qp) override;
   LibMeboStatus get_loop_filter_level(LibMeboRateController *rc,
                                       int *filter_level) override;
-  int InitSymbolsFromLiray();
+  int InitSymbolsFromLibrary();
 
 private:
-  typedef void *BrcCodecEnginePtr;
-  BrcCodecEnginePtr brc_codec_handler;
   // std::unique_ptr <aom::AV1RateControlRTC> av1_rc_rtc_;
   void *handle;
   typedef AomAV1RateControlRtcConfig *(*create_av1_rate_control_config_t)();
-  typedef void *(*createAV1Controller_t)(const AomAV1RateControlRtcConfig &rc_cfg);
-  typedef bool (*UpdateRateControl_AV1_t)(void *controller, const AomAV1RateControlRtcConfig &rc_cfg);
+  typedef void *(*createAV1Controller_t)(
+      const AomAV1RateControlRtcConfig &rc_cfg);
+  typedef bool (*UpdateRateControl_AV1_t)(
+      void *controller, const AomAV1RateControlRtcConfig &rc_cfg);
   typedef int (*GetQP_AV1_t)(void *controller);
-  typedef FrameDropDecision (*ComputeQP_AV1_t)(void *controller, const AomAV1FrameParamsRTC &frame_params);
+  typedef FrameDropDecision (*ComputeQP_AV1_t)(
+      void *controller, const AomAV1FrameParamsRTC &frame_params);
   typedef AomAV1LoopfilterLevel (*GetLoopfilterLevel_AV1_t)(void *controller);
-  typedef void (*PostEncodeUpdate_AV1_t)(void *controller, uint64_t encoded_frame_size);
-  typedef bool (*GetSegmentationData_AV1_t)(void *controller, AomAV1SegmentationData *segmentation_data);
+  typedef void (*PostEncodeUpdate_AV1_t)(void *controller,
+                                         uint64_t encoded_frame_size);
+  typedef bool (*GetSegmentationData_AV1_t)(
+      void *controller, AomAV1SegmentationData *segmentation_data);
   typedef AomAV1CdefInfo (*GetCdefInfo_AV1_t)(void *controller);
 
-
-  typedef void (*InitRateControlConfigFunc)(struct AomAV1RateControlRtcConfig *config);
+  typedef void (*InitRateControlConfigFunc)(
+      struct AomAV1RateControlRtcConfig *config);
   create_av1_rate_control_config_t create_av1_ratecontrol_config;
   createAV1Controller_t ptrCreateAV1Controller;
   UpdateRateControl_AV1_t ptrUpdateRateControl_AV1;
