@@ -105,7 +105,7 @@
 extern "C" {
 #endif
 
-#define LIBMEBO_ENABLE_AV1 1
+//#define LIBMEBO_ENABLE_AV1 1
 #define LIBMEBO_ENABLE_VP9 1
 #define LIBMEBO_ENABLE_VP8 1
 

@@ -30,12 +30,10 @@ brc_controller  = shared_library('brc_controller',
   link_args: '-ldl',
   dependencies: [dl_dep_c, dl_dep_cpp, libbrc_dep],
   install:true,
-  #include_directories: [configinc, libbrcinc, aom_av1_include_dir, aom_av1_include_build_dir],
 )
 
  libbrc_controller_dep = declare_dependency (link_with: brc_controller,
    include_directories: [configinc, libbrcinc],
-   #include_directories: [configinc, libbrcinc, aom_av1_include_dir , aom_av1_include_build_dir],
-   dependencies: [dl_dep_c, dl_dep_cpp]
+   dependencies: [dl_dep_c, dl_dep_cpp, libbrc_dep]
  )
   

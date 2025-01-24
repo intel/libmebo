@@ -16,11 +16,7 @@ if LIBMEBO_ENABLE_VP8
   ]
 endif
 if LIBMEBO_ENABLE_AV1
-  libbrc_sources += [
-      'av1/aom_derived/aom_av1_ratectrl.c',
-      'av1/aom_derived/aom_av1_svc_layercontext.c',
-      'av1/aom_derived/aom_av1_rtc.c',
-  ]
+  libbrc_sources += [ ]
 endif
 
 if LIBMEBO_ENABLE_VP9 
@@ -40,12 +36,7 @@ if LIBMEBO_ENABLE_VP8
   ]
 endif
 if LIBMEBO_ENABLE_AV1
-  libbrc_headers += [
-      'av1/aom_derived/aom_av1_common.h',
-      'av1/aom_derived/aom_av1_svc_layercontext.h',
-      'av1/aom_derived/aom_av1_ratectrl.h',
-      'av1/aom_derived/aom_av1_rtc.h',
-  ]
+  libbrc_headers += [ ]
 endif
 
 ldflags = ['-lm']

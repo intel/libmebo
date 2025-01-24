@@ -16,7 +16,7 @@ libmebo  = shared_library('mebo',
   version : libmebo_soname_version,
   soversion : libmebo_version_major,
   install : true,
-  install_dir : libmebo_install_dir,)
+  )
 
 libmebo_dep_internal = declare_dependency(link_with: libmebo,
   include_directories : [configinc, libbrcinc],
