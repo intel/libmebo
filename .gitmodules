@@ -1,0 +1,6 @@
+[submodule "aom"]
+	path = aom
+	url = https://aomedia.googlesource.com/aom
+[submodule "git_submodules/aom"]
+	path = git_submodules/aom
+	url = https://aomedia.googlesource.com/aom
