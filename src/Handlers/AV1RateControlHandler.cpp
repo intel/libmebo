@@ -5,8 +5,7 @@
 #include "../../../aom/av1/ratectrl_rtc.h"
 
 Libmebo_brc_AV1::Libmebo_brc_AV1(LibMeboBrcAlgorithmID algo_id)
-    : Libmebo_brc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr),
-      ptrCreateAV1Controller(nullptr) {
+    : Libmebo_brc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr) {
   enc_params_libmebo.num_sl = 1;
   enc_params_libmebo.num_tl = 1;
   enc_params_libmebo.bitrate = 288; // in kbps.
@@ -93,13 +92,14 @@ Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
 
   libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
 
-  memset(&config, 0, sizeof(config));
+  config = (AomAV1RateControlRtcConfig *) aligned_alloc(alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
+  memset(config, 0, sizeof(AomAV1RateControlRtcConfig));
   ptrInitConfigFunc(config);
 
   if (config == nullptr)
     return nullptr;
 
-  controller = ptrCreateAV1Controller(*config);
+  controller = ptrCreateAV1Controller(config);
   if (controller == nullptr)
     return nullptr;
   return libmebo_rc;
@@ -113,7 +113,7 @@ Libmebo_brc_AV1::update_config(LibMeboRateController *rc,
   if (!rc || !rc_config)
     return LIBMEBO_STATUS_ERROR;
 
-  ptrUpdateRateControl_AV1(controller, *config);
+  ptrUpdateRateControl_AV1(controller, config);
 
   return status;
 }

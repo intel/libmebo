@@ -40,10 +40,10 @@ private:
   // std::unique_ptr <aom::AV1RateControlRTC> av1_rc_rtc_;
   void *handle;
   typedef AomAV1RateControlRtcConfig *(*create_av1_rate_control_config_t)();
-  typedef void *(*createAV1Controller_t)(
-      const AomAV1RateControlRtcConfig &rc_cfg);
+  typedef AomAV1RateControlRTC *(*createAV1Controller_t)(
+      const AomAV1RateControlRtcConfig *rc_cfg);
   typedef bool (*UpdateRateControl_AV1_t)(
-      void *controller, const AomAV1RateControlRtcConfig &rc_cfg);
+      void *controller, const AomAV1RateControlRtcConfig *rc_cfg);
   typedef int (*GetQP_AV1_t)(void *controller);
   typedef AomFrameDropDecision (*ComputeQP_AV1_t)(
       void *controller, const AomAV1FrameParamsRTC &frame_params);

@@ -448,7 +448,7 @@ static void start_virtual_encode(std::unique_ptr<Libmebo_brc> &brc,
     assert(status == LIBMEBO_STATUS_SUCCESS);
     status = brc->get_qp(rc, &qp);
     assert(status == LIBMEBO_STATUS_SUCCESS);
-    if (verbose)
+
       printf("QP = %d \n", qp);
 
     buf_size = predicted_size;
