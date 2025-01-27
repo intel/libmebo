@@ -1,3 +1,4 @@
-[submodule "git_submodules/aom"]
-	path = git_submodules/aom
+[submodule "aom"]
+	path = aom
 	url = https://aomedia.googlesource.com/aom
+
