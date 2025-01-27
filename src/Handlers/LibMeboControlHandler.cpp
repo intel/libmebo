@@ -6,15 +6,15 @@ extern "C" {
 
 #include "LibMeboControlHandler.hpp"
 
-Libmebo_brc::Libmebo_brc(LibMeboCodecType codec_type_in,
-                         LibMeboBrcAlgorithmID algo_id_in) {
+LibmeboBrc::LibmeboBrc(LibMeboCodecType codec_type_in,
+                         LibmeboBrcAlgorithmID algo_id_in) {
   codec_type = codec_type_in;
   algo_id = algo_id_in; // algo id is not used now after going for direct repos
-  //other members will init later
+  // other members will init later
 }
 
 uint32_t
-Libmebo_brc::MaxSizeOfKeyframeAsPercentage(uint32_t optimal_buffer_size,
+LibmeboBrc::MaxSizeOfKeyframeAsPercentage(uint32_t optimal_buffer_size,
                                            uint32_t max_framerate) {
   // Set max to the optimal buffer level (normalized by target BR),
   // and scaled by a scale_par.
@@ -35,11 +35,11 @@ Libmebo_brc::MaxSizeOfKeyframeAsPercentage(uint32_t optimal_buffer_size,
     return target_size_kbyte_as_percent;
 }
 
-int Libmebo_brc::GetBitratekBps_l(int sl_id, int tl_id) {
+int LibmeboBrc::GetBitratekBps_l(int sl_id, int tl_id) {
   return layered_bitrates[sl_id][tl_id];
 }
 
-void Libmebo_brc::InitLayeredFramerate(int num_tl, int framerate,
+void LibmeboBrc::InitLayeredFramerate(int num_tl, int framerate,
                                        int *ts_rate_decimator) {
   for (int tl = 0; tl < num_tl; tl++) {
     if (tl == 0)
@@ -52,7 +52,7 @@ void Libmebo_brc::InitLayeredFramerate(int num_tl, int framerate,
 
 #define LAYER_IDS_TO_IDX(sl, tl, num_tl) ((sl) * (num_tl) + (tl))
 
-void Libmebo_brc::InitLayeredBitrateAlloc(int num_sl, int num_tl, int bitrate) {
+void LibmeboBrc::InitLayeredBitrateAlloc(int num_sl, int num_tl, int bitrate) {
   int sl, tl;
 
   assert(num_sl && num_sl <= MaxSpatialLayers);
@@ -67,7 +67,7 @@ void Libmebo_brc::InitLayeredBitrateAlloc(int num_sl, int num_tl, int bitrate) {
 }
 
 LibMeboRateController *
-Libmebo_brc::init(LibMeboRateController *rc,
+LibmeboBrc::init(LibMeboRateController *rc,
                   LibMeboRateControllerConfig *rc_config) {
   InitLayeredBitrateAlloc(enc_params_libmebo.num_sl, enc_params_libmebo.num_tl,
                           enc_params_libmebo.bitrate);
@@ -78,13 +78,13 @@ Libmebo_brc::init(LibMeboRateController *rc,
   rc_config->target_bandwidth = enc_params_libmebo.bitrate;
   rc_config->buf_initial_sz = 500;
   rc_config->buf_optimal_sz = 600;
-  
+
   rc_config->buf_sz = 1000;
   rc_config->undershoot_pct = 50;
   rc_config->overshoot_pct = 50;
   rc_config->buf_initial_sz = 500;
   rc_config->buf_optimal_sz = 600;
-  
+
   rc_config->buf_sz = 1000;
   rc_config->undershoot_pct = 50;
   rc_config->overshoot_pct = 50;

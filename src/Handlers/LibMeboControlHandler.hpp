@@ -21,10 +21,10 @@ struct EncParamsLibmebo {
   int64_t buf_optimal_sz;
 };
 
-class Libmebo_brc {
+class LibmeboBrc {
 public:
-  Libmebo_brc(LibMeboCodecType codec_type, LibMeboBrcAlgorithmID algo_id);
-  virtual ~Libmebo_brc() = default;
+  LibmeboBrc(LibMeboCodecType codec_type, LibmeboBrcAlgorithmID algo_id);
+  virtual ~LibmeboBrc() = default;
 
   virtual LibMeboRateController *
   init(LibMeboRateController *rc, LibMeboRateControllerConfig *rc_config) = 0;
@@ -48,7 +48,7 @@ public:
 
 protected:
   LibMeboCodecType codec_type;
-  LibMeboBrcAlgorithmID algo_id;
+  LibmeboBrcAlgorithmID algo_id;
   EncParamsLibmebo enc_params_libmebo;
   int layered_frame_rate[MaxTemporalLayers];
   int layered_bitrates[MaxSpatialLayers][MaxTemporalLayers];

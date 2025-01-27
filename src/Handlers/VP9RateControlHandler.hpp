@@ -5,10 +5,10 @@ extern "C" {
 
 #include "LibMeboControlHandler.hpp"
 
-class Libmebo_brc_VP9 : public Libmebo_brc {
+class LibmeboBrc_VP9 : public LibmeboBrc {
 public:
-  Libmebo_brc_VP9(LibMeboBrcAlgorithmID algo_id);
-  virtual ~Libmebo_brc_VP9() override = default;
+  LibmeboBrc_VP9(LibmeboBrcAlgorithmID algo_id);
+  virtual ~LibmeboBrc_VP9() override = default;
   LibMeboRateController *init(LibMeboRateController *rc,
                               LibMeboRateControllerConfig *rc_config) override;
   LibMeboStatus update_config(LibMeboRateController *rc,

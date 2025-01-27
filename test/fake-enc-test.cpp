@@ -353,7 +353,7 @@ static void get_layer_ids(int frame_count, int num_sl, int num_tl,
   _prev_temporal_id = t_id;
 }
 
-static void start_virtual_encode(std::unique_ptr<Libmebo_brc> &brc,
+static void start_virtual_encode(std::unique_ptr<LibmeboBrc> &brc,
                                  LibMeboRateController *rc,
                                  LibMeboRateControllerConfig rc_config) {
   int i, qp = 0;
@@ -449,7 +449,7 @@ static void start_virtual_encode(std::unique_ptr<Libmebo_brc> &brc,
     status = brc->get_qp(rc, &qp);
     assert(status == LIBMEBO_STATUS_SUCCESS);
 
-      printf("QP = %d \n", qp);
+    printf("QP = %d \n", qp);
 
     buf_size = predicted_size;
 
@@ -521,8 +521,8 @@ int main(int argc, char **argv) {
   parse_args(argc, (char **)argv);
   ValidateInput();
   printf("started in fake test main\n");
-  std::unique_ptr<Libmebo_brc> brc = Libmebo_brc_factory::create(
-      static_cast<LibMeboBrcAlgorithmID>(enc_params.id));
+  std::unique_ptr<LibmeboBrc> brc = Libmebo_brc_factory::create(
+      static_cast<LibmeboBrcAlgorithmID>(enc_params.id));
 
   if (brc != nullptr) {
     LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;

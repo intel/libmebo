@@ -4,8 +4,8 @@
 
 #include "../../../aom/av1/ratectrl_rtc.h"
 
-Libmebo_brc_AV1::Libmebo_brc_AV1(LibMeboBrcAlgorithmID algo_id)
-    : Libmebo_brc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr) {
+LibmeboBrc_AV1::LibmeboBrc_AV1(LibmeboBrcAlgorithmID algo_id)
+    : LibmeboBrc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr) {
   enc_params_libmebo.num_sl = 1;
   enc_params_libmebo.num_tl = 1;
   enc_params_libmebo.bitrate = 288; // in kbps.
@@ -19,32 +19,33 @@ Libmebo_brc_AV1::Libmebo_brc_AV1(LibMeboBrcAlgorithmID algo_id)
   enc_params_libmebo.buf_optimal_sz = 600;
 }
 
-Libmebo_brc_AV1::~Libmebo_brc_AV1() {
+LibmeboBrc_AV1::~LibmeboBrc_AV1() {
   if (handle) {
     dlclose(handle);
   }
 }
 
 #define av1aom_zero(dest) memset(&(dest), 0, sizeof(dest))
-AomAV1RateControlRtcConfig *config;
-void *controller;
+AomAV1RateControlRtcConfig *rc_config;
+AomAV1RateControlRTC *controller;
 
-int Libmebo_brc_AV1::InitSymbolsFromLibrary() {
+int LibmeboBrc_AV1::InitSymbolsFromLibrary() {
 
-  char path[] = "/usr/local/lib/libaom_av1_rc.so"; // this needs to be at config time.
+  char path[] = "/usr/local/lib/libaom_av1_rc.so";
 
   handle = dlopen(path, RTLD_LAZY);
+
   if (!handle) {
     return kMainHandleLibError;
   }
 
   ptrCreateAV1Controller =
-      (createAV1Controller_t)dlsym(handle, "av1_ratecontrol_rtc_create");
+      (CreateRateControl_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_create");
   if (!ptrCreateAV1Controller) {
     return kAv1CreateSymbLoadError;
   }
 
-  ptrInitConfigFunc = (InitRateControlConfigFunc)dlsym(
+  ptrInitConfigFunc = (InitRateControlConfigFunc_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_init_ratecontrol_config");
   if (!ptrInitConfigFunc) {
     return kAV1RateCtrlInitConfigSymbLoadError;
@@ -83,42 +84,43 @@ int Libmebo_brc_AV1::InitSymbolsFromLibrary() {
 }
 
 LibMeboRateController *
-Libmebo_brc_AV1::init(LibMeboRateController *libmebo_rc,
+LibmeboBrc_AV1::init(LibMeboRateController *libmebo_rc,
                       LibMeboRateControllerConfig *libmebo_rc_config) {
   int result = InitSymbolsFromLibrary();
   if (result != kNoError) {
     return nullptr;
   }
 
-  libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
+  libmebo_rc = LibmeboBrc::init(libmebo_rc, libmebo_rc_config);
 
-  config = (AomAV1RateControlRtcConfig *) aligned_alloc(alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
-  memset(config, 0, sizeof(AomAV1RateControlRtcConfig));
-  ptrInitConfigFunc(config);
+  rc_config = (AomAV1RateControlRtcConfig *)aligned_alloc(
+      alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
 
-  if (config == nullptr)
-    return nullptr;
+  if(rc_config == nullptr) return nullptr;
+  memset(rc_config, 0, sizeof(AomAV1RateControlRtcConfig));
 
-  controller = ptrCreateAV1Controller(config);
+  ptrInitConfigFunc(rc_config);
+
+  controller = ptrCreateAV1Controller(rc_config);
   if (controller == nullptr)
     return nullptr;
   return libmebo_rc;
 }
 
 LibMeboStatus
-Libmebo_brc_AV1::update_config(LibMeboRateController *rc,
-                               LibMeboRateControllerConfig *rc_config) {
+LibmeboBrc_AV1::update_config(LibMeboRateController *rc,
+                               LibMeboRateControllerConfig *LibmeboRc_config) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   if (!rc || !rc_config)
     return LIBMEBO_STATUS_ERROR;
 
-  ptrUpdateRateControl_AV1(controller, config);
+  ptrUpdateRateControl_AV1(controller, rc_config);
 
   return status;
 }
 
-LibMeboStatus Libmebo_brc_AV1::post_encode_update(LibMeboRateController *rc,
+LibMeboStatus LibmeboBrc_AV1::post_encode_update(LibMeboRateController *rc,
                                                   uint64_t encoded_frame_size) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
@@ -131,7 +133,7 @@ LibMeboStatus Libmebo_brc_AV1::post_encode_update(LibMeboRateController *rc,
 }
 
 LibMeboStatus
-Libmebo_brc_AV1::compute_qp(LibMeboRateController *rc,
+LibmeboBrc_AV1::compute_qp(LibMeboRateController *rc,
                             LibMeboRCFrameParams *rc_frame_params) {
 
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
@@ -145,11 +147,14 @@ Libmebo_brc_AV1::compute_qp(LibMeboRateController *rc,
   else
     frame_params_aom.frame_type = kAomInterFrame;
 
-  ptrComputeQP_AV1(controller, frame_params_aom);
+  frame_params_aom.spatial_layer_id = 0;
+  frame_params_aom.temporal_layer_id = 0;
+
+  ptrComputeQP_AV1(controller, *(&frame_params_aom));
   return status;
 }
 
-LibMeboStatus Libmebo_brc_AV1::get_qp(LibMeboRateController *rc, int *qp) {
+LibMeboStatus LibmeboBrc_AV1::get_qp(LibMeboRateController *rc, int *qp) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   if (!rc)
@@ -159,7 +164,7 @@ LibMeboStatus Libmebo_brc_AV1::get_qp(LibMeboRateController *rc, int *qp) {
   return status;
 }
 
-LibMeboStatus Libmebo_brc_AV1::get_loop_filter_level(LibMeboRateController *rc,
+LibMeboStatus LibmeboBrc_AV1::get_loop_filter_level(LibMeboRateController *rc,
                                                      int *filter_level) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
   if (!rc)

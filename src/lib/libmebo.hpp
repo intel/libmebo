@@ -59,7 +59,7 @@
  *
  * //Create an instance of libmebo
  * rc = libmebo_rate_controller_new (LIBMEBO_CODEC_VP9,
- * LIBMEBO_BRC_ALGORITHM_DEFAULT);
+ * Libmebo_brc_ALGORITHM_DEFAULT);
  *
  * //Initialize the libmebo instance with the rc_config
  * status = libmebo_rate_controller_init (rc, &rc_config);
@@ -125,12 +125,12 @@ typedef enum {
  * Backend algorithm IDs
  */
 typedef enum {
-  LIBMEBO_BRC_ALGORITHM_DEFAULT,
-  LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP8,
-  LIBMEBO_BRC_ALGORITHM_DERIVED_LIBVPX_VP9,
-  LIBMEBO_BRC_ALGORITHM_DERIVED_AOM_AV1,
-  LIBMEBO_BRC_ALGORITHM_UNKNOWN,
-} LibMeboBrcAlgorithmID;
+  Libmebo_brc_ALGORITHM_DEFAULT,
+  Libmebo_brc_ALGORITHM_DERIVED_LIBVPX_VP8,
+  Libmebo_brc_ALGORITHM_DERIVED_LIBVPX_VP9,
+  Libmebo_brc_ALGORITHM_DERIVED_AOM_AV1,
+  Libmebo_brc_ALGORITHM_UNKNOWN,
+} LibmeboBrcAlgorithmID;
 
 /**
  * Return status type of libmebo APIs
@@ -401,12 +401,10 @@ typedef struct _LibMeboRateController {
   uint32_t _libmebo_reserved[32];
 } LibMeboRateController;
 
-
-
 /*these below API are exported using extern "C" to cleint side*/
 LibMeboRateController *
 libmebo_create_rate_controller(LibMeboCodecType CodecType,
-                               LibMeboBrcAlgorithmID algo_id);
+                               LibmeboBrcAlgorithmID algo_id);
 void libmebo_release_rate_controller(LibMeboRateController *rc);
 
 LibMeboRateController *

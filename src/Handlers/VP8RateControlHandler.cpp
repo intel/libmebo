@@ -3,8 +3,8 @@
 extern "C" {
 #include "../brc/vp8/libvpx_derived/libvpx_vp8_rtc.h"
 
-Libmebo_brc_VP8::Libmebo_brc_VP8(LibMeboBrcAlgorithmID algo_id)
-    : Libmebo_brc(LIBMEBO_CODEC_VP8, algo_id) {
+LibmeboBrc_VP8::LibmeboBrc_VP8(LibmeboBrcAlgorithmID algo_id)
+    : LibmeboBrc(LIBMEBO_CODEC_VP8, algo_id) {
   enc_params_libmebo.num_sl = 1;
   enc_params_libmebo.num_tl = 1;
   enc_params_libmebo.bitrate = 288; // in kbps.
@@ -19,13 +19,13 @@ Libmebo_brc_VP8::Libmebo_brc_VP8(LibMeboBrcAlgorithmID algo_id)
 }
 
 LibMeboRateController *
-Libmebo_brc_VP8::init(LibMeboRateController *libmebo_rc,
+LibmeboBrc_VP8::init(LibMeboRateController *libmebo_rc,
                       LibMeboRateControllerConfig *libmebo_rc_config) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
   if (!libmebo_rc || !libmebo_rc_config)
     return nullptr;
 
-  libmebo_rc = Libmebo_brc::init(libmebo_rc, libmebo_rc_config);
+  libmebo_rc = LibmeboBrc::init(libmebo_rc, libmebo_rc_config);
   status = brc_vp8_rate_control_init(libmebo_rc_config, &brc_codec_handler);
   if (status != LIBMEBO_STATUS_SUCCESS)
     fprintf(stderr, "Failed to Initialize the RateController\n");
@@ -39,7 +39,7 @@ Libmebo_brc_VP8::init(LibMeboRateController *libmebo_rc,
 }
 
 LibMeboStatus
-Libmebo_brc_VP8::update_config(LibMeboRateController *rc,
+LibmeboBrc_VP8::update_config(LibMeboRateController *rc,
                                LibMeboRateControllerConfig *rc_cfg) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
 
@@ -52,7 +52,7 @@ Libmebo_brc_VP8::update_config(LibMeboRateController *rc,
   return status;
 }
 
-LibMeboStatus Libmebo_brc_VP8::post_encode_update(LibMeboRateController *rc,
+LibMeboStatus LibmeboBrc_VP8::post_encode_update(LibMeboRateController *rc,
                                                   uint64_t encoded_frame_size) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
   if (!rc)
@@ -66,7 +66,7 @@ LibMeboStatus Libmebo_brc_VP8::post_encode_update(LibMeboRateController *rc,
 }
 
 LibMeboStatus
-Libmebo_brc_VP8::compute_qp(LibMeboRateController *rc,
+LibmeboBrc_VP8::compute_qp(LibMeboRateController *rc,
                             LibMeboRCFrameParams *rc_frame_params) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
 
@@ -80,7 +80,7 @@ Libmebo_brc_VP8::compute_qp(LibMeboRateController *rc,
   return status;
 }
 
-LibMeboStatus Libmebo_brc_VP8::get_qp(LibMeboRateController *rc, int *qp) {
+LibMeboStatus LibmeboBrc_VP8::get_qp(LibMeboRateController *rc, int *qp) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
   if (!rc)
     return status;
@@ -91,7 +91,7 @@ LibMeboStatus Libmebo_brc_VP8::get_qp(LibMeboRateController *rc, int *qp) {
   return status;
 }
 
-LibMeboStatus Libmebo_brc_VP8::get_loop_filter_level(LibMeboRateController *rc,
+LibMeboStatus LibmeboBrc_VP8::get_loop_filter_level(LibMeboRateController *rc,
                                                      int *filter_level) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
 
