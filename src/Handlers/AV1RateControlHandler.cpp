@@ -23,10 +23,11 @@ LibmeboBrc_AV1::~LibmeboBrc_AV1() {
   if (handle) {
     dlclose(handle);
   }
+  if (rcConfig)
+    free(rcConfig);
 }
 
 #define av1aom_zero(dest) memset(&(dest), 0, sizeof(dest))
-AomAV1RateControlRtcConfig *rcConfig;
 AomAV1RateControlRTC *controller;
 
 int LibmeboBrc_AV1::InitSymbolsFromLibrary() {
@@ -85,7 +86,7 @@ int LibmeboBrc_AV1::InitSymbolsFromLibrary() {
 
 LibMeboRateController *
 LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
-                      LibMeboRateControllerConfig *libMeboRCConfig) {
+                     LibMeboRateControllerConfig *libMeboRCConfig) {
   int result = InitSymbolsFromLibrary();
   if (result != kNoError) {
     return nullptr;
@@ -96,7 +97,8 @@ LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
   rcConfig = (AomAV1RateControlRtcConfig *)aligned_alloc(
       alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
 
-  if(rcConfig == nullptr) return nullptr;
+  if (rcConfig == nullptr)
+    return nullptr;
   memset(rcConfig, 0, sizeof(AomAV1RateControlRtcConfig));
 
   ptrInitConfigFunc(rcConfig);
@@ -109,7 +111,7 @@ LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
 
 LibMeboStatus
 LibmeboBrc_AV1::update_config(LibMeboRateController *rc,
-                               LibMeboRateControllerConfig *LibmeboRcConfig) {
+                              LibMeboRateControllerConfig *LibmeboRcConfig) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   if (!rc || !LibmeboRcConfig)
@@ -121,7 +123,7 @@ LibmeboBrc_AV1::update_config(LibMeboRateController *rc,
 }
 
 LibMeboStatus LibmeboBrc_AV1::post_encode_update(LibMeboRateController *rc,
-                                                  uint64_t encodedFrameSize) {
+                                                 uint64_t encodedFrameSize) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   if (!rc)
@@ -132,9 +134,8 @@ LibMeboStatus LibmeboBrc_AV1::post_encode_update(LibMeboRateController *rc,
   return status;
 }
 
-LibMeboStatus
-LibmeboBrc_AV1::compute_qp(LibMeboRateController *rc,
-                            LibMeboRCFrameParams *rcFrameParams) {
+LibMeboStatus LibmeboBrc_AV1::compute_qp(LibMeboRateController *rc,
+                                         LibMeboRCFrameParams *rcFrameParams) {
 
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
@@ -165,7 +166,7 @@ LibMeboStatus LibmeboBrc_AV1::get_qp(LibMeboRateController *rc, int *qp) {
 }
 
 LibMeboStatus LibmeboBrc_AV1::get_loop_filter_level(LibMeboRateController *rc,
-                                                     int *filter_level) {
+                                                    int *filter_level) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
   if (!rc)
     return LIBMEBO_STATUS_ERROR;

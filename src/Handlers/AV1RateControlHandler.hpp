@@ -71,4 +71,5 @@ private:
   PostEncodeUpdate_AV1_t ptrPostEncodeUpdate_AV1;
   GetSegmentationData_AV1_t ptrGetSegmentationData_AV1;
   GetCdefInfo_AV1_t ptrGetCdefInfo_AV1;
+  AomAV1RateControlRtcConfig *rcConfig;
 };
