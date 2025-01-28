@@ -17,14 +17,14 @@ struct EncParamsLibmebo {
   unsigned int framecount;          // Number of Frames to be encoded
   unsigned int num_sl;              // Number of Spatial Layers
   unsigned int num_tl;              // Number of Temporal Layers
-  unsigned int dynamic_rate_change; // dynamic rate change enablement flag
-  int64_t buf_optimal_sz;
+  unsigned int dynamicRateChange; // dynamic rate change enablement flag
+  int64_t bufOptimalSz;
 };
 
-class LibmeboBrc {
+class LibMeboBrc {
 public:
-  LibmeboBrc(LibMeboCodecType codec_type, LibmeboBrcAlgorithmID algo_id);
-  virtual ~LibmeboBrc() = default;
+  LibMeboBrc(LibMeboCodecType codecType, LibMeboBrcAlgorithmID algo_id);
+  virtual ~LibMeboBrc() = default;
 
   virtual LibMeboRateController *
   init(LibMeboRateController *rc, LibMeboRateControllerConfig *rc_config) = 0;
@@ -41,15 +41,15 @@ public:
   uint32_t MaxSizeOfKeyframeAsPercentage(uint32_t optimal_buffer_size,
                                          uint32_t max_framerate);
   int GetBitratekBps_l(int sl_id, int tl_id);
-  void InitLayeredFramerate(int num_tl, int framerate, int *ts_rate_decimator);
+  void InitLayeredFramerate(int num_tl, int framerate, int *tsRateDecimator);
   void InitLayeredBitrateAlloc(int num_sl, int num_tl, int bitrate);
 
   LibMeboCodecType getCodecType() const { return codec_type; }
 
 protected:
   LibMeboCodecType codec_type;
-  LibmeboBrcAlgorithmID algo_id;
-  EncParamsLibmebo enc_params_libmebo;
-  int layered_frame_rate[MaxTemporalLayers];
+  LibMeboBrcAlgorithmID algo_id;
+  EncParamsLibmebo encParamsLibMebo;
+  int layeredFrameRate[MaxTemporalLayers];
   int layered_bitrates[MaxSpatialLayers][MaxTemporalLayers];
 };

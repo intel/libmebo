@@ -19,45 +19,43 @@ typedef enum ErrorsLoadingSymbols {
   kGetLoopFilterSymbError = -8,
 } ErrosLibmeboSymbols;
 
-class LibmeboBrc_AV1 : public LibmeboBrc {
+class LibmeboBrc_AV1 : public LibMeboBrc {
 public:
-  LibmeboBrc_AV1(LibmeboBrcAlgorithmID algo_id);
+  LibmeboBrc_AV1(LibMeboBrcAlgorithmID algo_id);
   virtual ~LibmeboBrc_AV1() override;
   LibMeboRateController *init(LibMeboRateController *rc,
-                              LibMeboRateControllerConfig *rc_config) override;
+                              LibMeboRateControllerConfig *rcConfig) override;
   LibMeboStatus update_config(LibMeboRateController *rc,
-                              LibMeboRateControllerConfig *rc_cfg) override;
+                              LibMeboRateControllerConfig *rcConfig) override;
   LibMeboStatus post_encode_update(LibMeboRateController *rc,
-                                   uint64_t encoded_frame_size) override;
+                                   uint64_t encodedFrameSize) override;
   LibMeboStatus compute_qp(LibMeboRateController *rc,
-                           LibMeboRCFrameParams *rc_frame_params) override;
+                           LibMeboRCFrameParams *rcFrameParams) override;
   LibMeboStatus get_qp(LibMeboRateController *rc, int *qp) override;
   LibMeboStatus get_loop_filter_level(LibMeboRateController *rc,
-                                      int *filter_level) override;
+                                      int *filterLevel) override;
   int InitSymbolsFromLibrary();
 
 private:
-  // std::unique_ptr <aom::AV1RateControlRTC> av1_rc_rtc_;
   void *handle;
-
   typedef void (*InitRateControlConfigFunc_AV1_t)(
-      struct AomAV1RateControlRtcConfig *rc_config);
+      struct AomAV1RateControlRtcConfig *rcConfig);
 
   typedef AomAV1RateControlRTC *(*CreateRateControl_AV1_t)(
-      const struct AomAV1RateControlRtcConfig *rc_config);
+      const struct AomAV1RateControlRtcConfig *rcConfig);
 
   typedef bool (*UpdateRateControl_AV1_t)(
-      void *controller, struct AomAV1RateControlRtcConfig *rc_config);
+      void *controller, struct AomAV1RateControlRtcConfig *rcConfig);
 
   typedef AomFrameDropDecision (*ComputeQP_AV1_t)(
-      void *controller, const AomAV1FrameParamsRTC &frame_params);
+      void *controller, const AomAV1FrameParamsRTC &frameParams);
 
   typedef int (*GetQP_AV1_t)(void *controller);
 
   typedef AomAV1LoopfilterLevel (*GetLoopfilterLevel_AV1_t)(void *controller);
 
   typedef void (*PostEncodeUpdate_AV1_t)(void *controller,
-                                         uint64_t encoded_frame_size);
+                                         uint64_t encodedFrameSize);
 
   typedef bool (*GetSegmentationData_AV1_t)(
       void *controller, AomAV1SegmentationData *segmentation_data);

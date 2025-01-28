@@ -25,9 +25,9 @@ typedef enum CodecID_ {
 
 LibMeboRateController *
 libmebo_create_rate_controller(LibMeboCodecType CodecType,
-                               LibmeboBrcAlgorithmID algo_id) {
-  std::unique_ptr<LibmeboBrc> brc =
-      Libmebo_brc_factory::create(static_cast<LibmeboBrcAlgorithmID>(algo_id));
+                               LibMeboBrcAlgorithmID algo_id) {
+  std::unique_ptr<LibMeboBrc> brc =
+      Libmebo_brc_factory::create(static_cast<LibMeboBrcAlgorithmID>(algo_id));
   if (!brc)
     return nullptr;
   LibMeboRateController *libmebo_rc = static_cast<LibMeboRateController *>(
@@ -43,7 +43,7 @@ libmebo_create_rate_controller(LibMeboCodecType CodecType,
 }
 void libmebo_release_rate_controller(LibMeboRateController *rc) {
   if (rc) {
-    LibmeboBrc *brc = static_cast<LibmeboBrc *>(rc->priv);
+    LibMeboBrc *brc = static_cast<LibMeboBrc *>(rc->priv);
     delete brc;
     free(rc);
   }
@@ -52,38 +52,38 @@ void libmebo_release_rate_controller(LibMeboRateController *rc) {
 LibMeboRateController *
 libmebo_init_rate_controller(LibMeboRateController *rc,
                              LibMeboRateControllerConfig *rc_config) {
-  LibmeboBrc *brc = reinterpret_cast<LibmeboBrc *>(rc->priv);
+  LibMeboBrc *brc = reinterpret_cast<LibMeboBrc *>(rc->priv);
   return reinterpret_cast<LibMeboRateController *>(brc->init(rc, rc_config));
 }
 
 LibMeboStatus
 libmebo_update_rate_controller_config(LibMeboRateController *rc,
                                       LibMeboRateControllerConfig *rc_cfg) {
-  LibmeboBrc *brc = reinterpret_cast<LibmeboBrc *>(rc->priv);
+  LibMeboBrc *brc = reinterpret_cast<LibMeboBrc *>(rc->priv);
   return static_cast<LibMeboStatus>(brc->update_config(rc, rc_cfg));
 }
 
 LibMeboStatus libmebo_post_encode_update(LibMeboRateController *rc,
                                          uint64_t encoded_frame_size) {
-  LibmeboBrc *brc = reinterpret_cast<LibmeboBrc *>(rc->priv);
+  LibMeboBrc *brc = reinterpret_cast<LibMeboBrc *>(rc->priv);
   return static_cast<LibMeboStatus>(
       brc->post_encode_update(rc, encoded_frame_size));
 }
 
 LibMeboStatus libmebo_compute_qp(LibMeboRateController *rc,
                                  LibMeboRCFrameParams *rc_frame_params) {
-  LibmeboBrc *brc = reinterpret_cast<LibmeboBrc *>(rc->priv);
+  LibMeboBrc *brc = reinterpret_cast<LibMeboBrc *>(rc->priv);
   return static_cast<LibMeboStatus>(brc->compute_qp(rc, rc_frame_params));
 }
 
 LibMeboStatus libmebo_get_qp(LibMeboRateController *rc, int *qp) {
-  LibmeboBrc *brc = reinterpret_cast<LibmeboBrc *>(rc->priv);
+  LibMeboBrc *brc = reinterpret_cast<LibMeboBrc *>(rc->priv);
   return static_cast<LibMeboStatus>(brc->get_qp(rc, qp));
 }
 
 LibMeboStatus libmebo_get_loop_filter_level(LibMeboRateController *rc,
                                             int *filter_level) {
-  LibmeboBrc *brc = reinterpret_cast<LibmeboBrc *>(rc->priv);
+  LibMeboBrc *brc = reinterpret_cast<LibMeboBrc *>(rc->priv);
   return static_cast<LibMeboStatus>(
       brc->get_loop_filter_level(rc, filter_level));
 }

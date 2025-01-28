@@ -3,19 +3,19 @@
 extern "C" {
 #include "../brc/vp9/libvpx_derived/libvpx_vp9_rtc.h"
 
-LibmeboBrc_VP9::LibmeboBrc_VP9(LibmeboBrcAlgorithmID algo_id)
-    : LibmeboBrc(LIBMEBO_CODEC_VP9, algo_id) {
-  enc_params_libmebo.num_sl = 1;
-  enc_params_libmebo.num_tl = 1;
-  enc_params_libmebo.bitrate = 288; // in kbps.
-  enc_params_libmebo.dynamic_rate_change = 0;
-  enc_params_libmebo.framecount = 100;
-  enc_params_libmebo.framerate = 60;
-  enc_params_libmebo.width = 320;
-  enc_params_libmebo.height = 160;
-  enc_params_libmebo.id = static_cast<unsigned int>(LIBMEBO_CODEC_VP9);
-  enc_params_libmebo.preset = 0;
-  enc_params_libmebo.buf_optimal_sz = 600;
+LibmeboBrc_VP9::LibmeboBrc_VP9(LibMeboBrcAlgorithmID algo_id)
+    : LibMeboBrc(LIBMEBO_CODEC_VP9, algo_id) {
+  encParamsLibMebo.num_sl = 1;
+  encParamsLibMebo.num_tl = 1;
+  encParamsLibMebo.bitrate = 288; // in kbps.
+  encParamsLibMebo.dynamicRateChange = 0;
+  encParamsLibMebo.framecount = 100;
+  encParamsLibMebo.framerate = 60;
+  encParamsLibMebo.width = 320;
+  encParamsLibMebo.height = 160;
+  encParamsLibMebo.id = static_cast<unsigned int>(LIBMEBO_CODEC_VP9);
+  encParamsLibMebo.preset = 0;
+  encParamsLibMebo.bufOptimalSz = 600;
 }
 
 LibMeboRateController *
@@ -25,7 +25,7 @@ LibmeboBrc_VP9::init(LibMeboRateController *libmebo_rc,
 
   if (!libmebo_rc || !libmebo_rc_config)
     return nullptr;
-  libmebo_rc = LibmeboBrc::init(libmebo_rc, libmebo_rc_config);
+  libmebo_rc = LibMeboBrc::init(libmebo_rc, libmebo_rc_config);
   status = brc_vp9_rate_control_init(libmebo_rc_config, &brc_codec_handler);
   if (status != LIBMEBO_STATUS_SUCCESS)
     fprintf(stderr, "Failed to Initialize the RateController\n");

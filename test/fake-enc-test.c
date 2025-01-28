@@ -133,7 +133,7 @@ static struct SvcBitrateBounds svc_bitrate_bounds_inter [] = {
 };
 
 int layered_bitrates[MaxSpatialLayers][MaxTemporalLayers];
-int layered_frame_rate[MaxTemporalLayers];
+int layeredFrameRate[MaxTemporalLayers];
 int layered_stream_size[MaxSpatialLayers][MaxTemporalLayers];
 int layered_frame_count[MaxSpatialLayers][MaxTemporalLayers];
 

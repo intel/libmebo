@@ -4,19 +4,19 @@
 
 #include "../../../aom/av1/ratectrl_rtc.h"
 
-LibmeboBrc_AV1::LibmeboBrc_AV1(LibmeboBrcAlgorithmID algo_id)
-    : LibmeboBrc(LIBMEBO_CODEC_AV1, algo_id), handle(nullptr) {
-  enc_params_libmebo.num_sl = 1;
-  enc_params_libmebo.num_tl = 1;
-  enc_params_libmebo.bitrate = 288; // in kbps.
-  enc_params_libmebo.dynamic_rate_change = 0;
-  enc_params_libmebo.framecount = 100;
-  enc_params_libmebo.framerate = 60;
-  enc_params_libmebo.width = 320;
-  enc_params_libmebo.height = 160;
-  enc_params_libmebo.id = static_cast<unsigned int>(LIBMEBO_CODEC_AV1);
-  enc_params_libmebo.preset = 0;
-  enc_params_libmebo.buf_optimal_sz = 600;
+LibmeboBrc_AV1::LibmeboBrc_AV1(LibMeboBrcAlgorithmID algoId)
+    : LibMeboBrc(LIBMEBO_CODEC_AV1, algoId), handle(nullptr) {
+  encParamsLibMebo.num_sl = 1;
+  encParamsLibMebo.num_tl = 1;
+  encParamsLibMebo.bitrate = 288; // in kbps.
+  encParamsLibMebo.dynamicRateChange = 0;
+  encParamsLibMebo.framecount = 100;
+  encParamsLibMebo.framerate = 60;
+  encParamsLibMebo.width = 320;
+  encParamsLibMebo.height = 160;
+  encParamsLibMebo.id = static_cast<unsigned int>(LIBMEBO_CODEC_AV1);
+  encParamsLibMebo.preset = 0;
+  encParamsLibMebo.bufOptimalSz = 600;
 }
 
 LibmeboBrc_AV1::~LibmeboBrc_AV1() {
@@ -26,7 +26,7 @@ LibmeboBrc_AV1::~LibmeboBrc_AV1() {
 }
 
 #define av1aom_zero(dest) memset(&(dest), 0, sizeof(dest))
-AomAV1RateControlRtcConfig *rc_config;
+AomAV1RateControlRtcConfig *rcConfig;
 AomAV1RateControlRTC *controller;
 
 int LibmeboBrc_AV1::InitSymbolsFromLibrary() {
@@ -84,73 +84,73 @@ int LibmeboBrc_AV1::InitSymbolsFromLibrary() {
 }
 
 LibMeboRateController *
-LibmeboBrc_AV1::init(LibMeboRateController *libmebo_rc,
-                      LibMeboRateControllerConfig *libmebo_rc_config) {
+LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
+                      LibMeboRateControllerConfig *libMeboRCConfig) {
   int result = InitSymbolsFromLibrary();
   if (result != kNoError) {
     return nullptr;
   }
 
-  libmebo_rc = LibmeboBrc::init(libmebo_rc, libmebo_rc_config);
+  libMeboRC = LibMeboBrc::init(libMeboRC, libMeboRCConfig);
 
-  rc_config = (AomAV1RateControlRtcConfig *)aligned_alloc(
+  rcConfig = (AomAV1RateControlRtcConfig *)aligned_alloc(
       alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
 
-  if(rc_config == nullptr) return nullptr;
-  memset(rc_config, 0, sizeof(AomAV1RateControlRtcConfig));
+  if(rcConfig == nullptr) return nullptr;
+  memset(rcConfig, 0, sizeof(AomAV1RateControlRtcConfig));
 
-  ptrInitConfigFunc(rc_config);
+  ptrInitConfigFunc(rcConfig);
 
-  controller = ptrCreateAV1Controller(rc_config);
+  controller = ptrCreateAV1Controller(rcConfig);
   if (controller == nullptr)
     return nullptr;
-  return libmebo_rc;
+  return libMeboRC;
 }
 
 LibMeboStatus
 LibmeboBrc_AV1::update_config(LibMeboRateController *rc,
-                               LibMeboRateControllerConfig *LibmeboRc_config) {
+                               LibMeboRateControllerConfig *LibmeboRcConfig) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
-  if (!rc || !rc_config)
+  if (!rc || !LibmeboRcConfig)
     return LIBMEBO_STATUS_ERROR;
 
-  ptrUpdateRateControl_AV1(controller, rc_config);
+  ptrUpdateRateControl_AV1(controller, rcConfig);
 
   return status;
 }
 
 LibMeboStatus LibmeboBrc_AV1::post_encode_update(LibMeboRateController *rc,
-                                                  uint64_t encoded_frame_size) {
+                                                  uint64_t encodedFrameSize) {
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   if (!rc)
     return LIBMEBO_STATUS_ERROR;
 
-  ptrPostEncodeUpdate_AV1(controller, encoded_frame_size);
+  ptrPostEncodeUpdate_AV1(controller, encodedFrameSize);
 
   return status;
 }
 
 LibMeboStatus
 LibmeboBrc_AV1::compute_qp(LibMeboRateController *rc,
-                            LibMeboRCFrameParams *rc_frame_params) {
+                            LibMeboRCFrameParams *rcFrameParams) {
 
   LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
 
   if (!rc)
     return LIBMEBO_STATUS_ERROR;
-  AomAV1FrameParamsRTC frame_params_aom;
+  AomAV1FrameParamsRTC frameParamsAom;
 
-  if (rc_frame_params->frame_type == LIBMEBO_KEY_FRAME)
-    frame_params_aom.frame_type = kAomKeyFrame;
+  if (rcFrameParams->frame_type == LIBMEBO_KEY_FRAME)
+    frameParamsAom.frame_type = kAomKeyFrame;
   else
-    frame_params_aom.frame_type = kAomInterFrame;
+    frameParamsAom.frame_type = kAomInterFrame;
 
-  frame_params_aom.spatial_layer_id = 0;
-  frame_params_aom.temporal_layer_id = 0;
+  frameParamsAom.spatial_layer_id = 0;
+  frameParamsAom.temporal_layer_id = 0;
 
-  ptrComputeQP_AV1(controller, *(&frame_params_aom));
+  ptrComputeQP_AV1(controller, *(&frameParamsAom));
   return status;
 }
 
