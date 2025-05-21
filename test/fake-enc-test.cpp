@@ -523,14 +523,16 @@ int main(int argc, char **argv) {
   printf("started in fake test main\n");
   std::unique_ptr<LibMeboBrc> brc = Libmebo_brc_factory::create(
       static_cast<LibMeboBrcAlgorithmID>(encParams.id));
-
+  printf("started in fake test main - 1\n");
   if (brc != nullptr) {
+    printf("started in fake test main - 2\n");
     LibMeboStatus status = LIBMEBO_STATUS_SUCCESS;
     libMeboRc = (LibMeboRateController *)malloc(sizeof(LibMeboRateController));
     if (!libMeboRc) {
       fprintf(stderr, "Failed allocation for LibMeboRateController \n");
       return NULL;
     }
+    printf("started in fake test main - 3\n");
     rc1 = brc->init(libMeboRc, &libmebo_rc_config);
     start_virtual_encode(brc, libMeboRc, libmebo_rc_config);
   }

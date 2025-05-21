@@ -1,8 +1,9 @@
 #include "AV1RateControlHandler.hpp"
 #include <cstring>
 #include <dlfcn.h>
-
-#include "../../../aom/av1/ratectrl_rtc.h"
+#include <stdlib.h>
+#include <iostream>
+#include "../../git_submodules/aom/av1/ratectrl_rtc.h"
 
 LibmeboBrc_AV1::LibmeboBrc_AV1(LibMeboBrcAlgorithmID algoId)
     : LibMeboBrc(LIBMEBO_CODEC_AV1, algoId), handle(nullptr) {
@@ -37,63 +38,64 @@ int LibmeboBrc_AV1::InitSymbolsFromLibrary() {
   handle = dlopen(path, RTLD_LAZY);
 
   if (!handle) {
-    return kMainHandleLibError;
+    return kMainHandleLibError_AV1;
   }
 
   ptrCreateAV1Controller =
       (CreateRateControl_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_create");
   if (!ptrCreateAV1Controller) {
-    return kAv1CreateSymbLoadError;
+    return kAv1CreateSymbLoadError_AV1;
   }
 
   ptrInitConfigFunc = (InitRateControlConfigFunc_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_init_ratecontrol_config");
   if (!ptrInitConfigFunc) {
-    return kAV1RateCtrlInitConfigSymbLoadError;
+    return kAV1RateCtrlInitConfigSymbLoadError_AV1;
   }
 
   ptrUpdateRateControl_AV1 =
       (UpdateRateControl_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_update");
   if (!ptrUpdateRateControl_AV1) {
-    return kUpdateRateControlSymbLoadError;
+    return kUpdateRateControlSymbLoadError_AV1;
   }
 
   ptrComputeQP_AV1 =
       (ComputeQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_compute_qp");
   if (!ptrComputeQP_AV1) {
-    return kCompueQPSymbLoadError;
+    return kCompueQPSymbLoadError_AV1;
   }
 
   ptrPostEncodeUpdate_AV1 = (PostEncodeUpdate_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_post_encode_update");
   if (!ptrPostEncodeUpdate_AV1) {
-    return kPostEncodeSymbLoadError;
+    return kPostEncodeSymbLoadError_AV1;
   }
 
   ptrGetQP_AV1 = (GetQP_AV1_t)dlsym(handle, "av1_ratecontrol_rtc_get_qp");
   if (!ptrGetQP_AV1) {
-    return kGetQpSymbLoadError;
+    return kGetQpSymbLoadError_AV1;
   }
 
   ptrGetLoopfilterLevel_AV1 = (GetLoopfilterLevel_AV1_t)dlsym(
       handle, "av1_ratecontrol_rtc_get_loop_filter_level");
   if (!ptrGetLoopfilterLevel_AV1) {
-    return kGetLoopFilterSymbError;
+    return kGetLoopFilterSymbError_AV1;
   }
 
-  return kNoError;
+  return kNoError_AV1;
 }
 
 LibMeboRateController *
 LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
                      LibMeboRateControllerConfig *libMeboRCConfig) {
+  std::cout<<"Inside init of AV1 "<<std::endl;
   int result = InitSymbolsFromLibrary();
-  if (result != kNoError) {
+  if (result != kNoError_AV1) {
     return nullptr;
   }
-
+  std::cout<<"Inside init of AV1 -2 "<<std::endl;
   libMeboRC = LibMeboBrc::init(libMeboRC, libMeboRCConfig);
-
+  std::cout<<"Inside init of AV1 -3"<<std::endl;
   rcConfig = (AomAV1RateControlRtcConfig *)aligned_alloc(
       alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
 

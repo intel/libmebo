@@ -1,13 +1,16 @@
 #pragma once
-#include "../src/Handlers/AV1RateControlHandler.hpp"
-#include "../src/Handlers/LibMeboControlHandler.hpp"
-#include "../src/Handlers/VP8RateControlHandler.hpp"
-#include "../src/Handlers/VP9RateControlHandler.hpp"
+#include "../Handlers/AV1RateControlHandler.hpp"
+#include "../Handlers/LibMeboControlHandler.hpp"
+#include "../Handlers/VP8RateControlHandler.hpp"
+#include "../Handlers/VP9RateControlHandler.hpp"
 #include <memory>
+#include <iostream>
 
 class Libmebo_brc_factory {
 public:
   static std::unique_ptr<LibMeboBrc> create(unsigned int id) {
+
+    std::cout<<"creating Libmebo_brc_factory object"<<std::endl;
     LibMeboCodecType codecType;
     switch (static_cast<LibMeboCodecType>(id)) {
     case LIBMEBO_CODEC_VP8:
@@ -33,6 +36,7 @@ public:
       return std::make_unique<LibmeboBrc_VP9>(
           static_cast<LibMeboBrcAlgorithmID>(id));
     case LIBMEBO_CODEC_AV1:
+      std::cout<<"creating AV1 object"<<std::endl;
       return std::make_unique<LibmeboBrc_AV1>(
           static_cast<LibMeboBrcAlgorithmID>(id));
     case LIBMEBO_CODEC_UNKNOWN:

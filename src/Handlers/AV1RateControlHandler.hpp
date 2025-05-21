@@ -4,20 +4,20 @@
 extern "C" {
 #include "../lib/libmebo.hpp"
 }
-#include "../../../aom/av1/ratectrl_rtc.h"
+#include "../../git_submodules/aom/av1/ratectrl_rtc.h"
 #include "LibMeboControlHandler.hpp"
 
-typedef enum ErrorsLoadingSymbols {
-  kNoError = 0,
-  kMainHandleLibError = -1,
-  kAv1CreateSymbLoadError = -2,
-  kAV1RateCtrlInitConfigSymbLoadError = -3,
-  kUpdateRateControlSymbLoadError = -4,
-  kCompueQPSymbLoadError = -5,
-  kPostEncodeSymbLoadError = -6,
-  kGetQpSymbLoadError = -7,
-  kGetLoopFilterSymbError = -8,
-} ErrosLibmeboSymbols;
+typedef enum ErrorsLoadingSymbols_AV1 {
+  kNoError_AV1 = 0,
+  kMainHandleLibError_AV1 = -1,
+  kAv1CreateSymbLoadError_AV1 = -2,
+  kAV1RateCtrlInitConfigSymbLoadError_AV1 = -3,
+  kUpdateRateControlSymbLoadError_AV1 = -4,
+  kCompueQPSymbLoadError_AV1 = -5,
+  kPostEncodeSymbLoadError_AV1 = -6,
+  kGetQpSymbLoadError_AV1 = -7,
+  kGetLoopFilterSymbError_AV1 = -8,
+} ErrosLibmeboSymbols_AV1;
 
 class LibmeboBrc_AV1 : public LibMeboBrc {
 public:

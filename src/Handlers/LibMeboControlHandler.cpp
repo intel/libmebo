@@ -69,6 +69,7 @@ void LibMeboBrc::InitLayeredBitrateAlloc(int num_sl, int num_tl, int bitrate) {
 LibMeboRateController *
 LibMeboBrc::init(LibMeboRateController *rc,
                   LibMeboRateControllerConfig *rc_config) {
+  std::cout<<"Inside init of brc "<<std::endl;
   InitLayeredBitrateAlloc(encParamsLibMebo.num_sl, encParamsLibMebo.num_tl,
                           encParamsLibMebo.bitrate);
   rc_config->width = encParamsLibMebo.width;
