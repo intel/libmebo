@@ -9,9 +9,8 @@
 class Libmebo_brc_factory {
 public:
   static std::unique_ptr<LibMeboBrc> create(unsigned int id) {
-
     std::cout<<"creating Libmebo_brc_factory object"<<std::endl;
-    LibMeboCodecType codecType;
+    LibMeboCodecType codecType = LIBMEBO_CODEC_UNKNOWN;
     switch (static_cast<LibMeboCodecType>(id)) {
     case LIBMEBO_CODEC_VP8:
       codecType = LIBMEBO_CODEC_VP8;
@@ -31,7 +30,7 @@ public:
     case LIBMEBO_CODEC_VP8:
       return std::make_unique<LibmeboBrc_VP8>(
           static_cast<LibMeboBrcAlgorithmID>(
-              id)); // this is calling construcotr.
+              id));
     case LIBMEBO_CODEC_VP9:
       return std::make_unique<LibmeboBrc_VP9>(
           static_cast<LibMeboBrcAlgorithmID>(id));

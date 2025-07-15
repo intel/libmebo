@@ -23,18 +23,18 @@ class LibmeboBrc_AV1 : public LibMeboBrc {
 public:
   LibmeboBrc_AV1(LibMeboBrcAlgorithmID algo_id);
   virtual ~LibmeboBrc_AV1() override;
-  LibMeboRateController *init(LibMeboRateController *rc,
+  [[nodiscard]] LibMeboRateController *init(LibMeboRateController *rc,
                               LibMeboRateControllerConfig *rcConfig) override;
-  LibMeboStatus update_config(LibMeboRateController *rc,
+  [[nodiscard]] LibMeboStatus update_config(LibMeboRateController *rc,
                               LibMeboRateControllerConfig *rcConfig) override;
-  LibMeboStatus post_encode_update(LibMeboRateController *rc,
+  [[nodiscard]] LibMeboStatus post_encode_update(LibMeboRateController *rc,
                                    uint64_t encodedFrameSize) override;
-  LibMeboStatus compute_qp(LibMeboRateController *rc,
+  [[nodiscard]] LibMeboStatus compute_qp(LibMeboRateController *rc,
                            LibMeboRCFrameParams *rcFrameParams) override;
-  LibMeboStatus get_qp(LibMeboRateController *rc, int *qp) override;
-  LibMeboStatus get_loop_filter_level(LibMeboRateController *rc,
+  [[nodiscard]] LibMeboStatus get_qp(LibMeboRateController *rc, int *qp) override;
+  [[nodiscard]] LibMeboStatus get_loop_filter_level(LibMeboRateController *rc,
                                       int *filterLevel) override;
-  int InitSymbolsFromLibrary();
+  [[nodiscard]]  int InitSymbolsFromLibrary();
 
 private:
   void *handle;
@@ -72,4 +72,5 @@ private:
   GetSegmentationData_AV1_t ptrGetSegmentationData_AV1;
   GetCdefInfo_AV1_t ptrGetCdefInfo_AV1;
   AomAV1RateControlRtcConfig *rcConfig;
+  AomAV1RateControlRTC *controller;
 };

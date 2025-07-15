@@ -18,7 +18,7 @@ LibmeboBrc_VP9::LibmeboBrc_VP9(LibMeboBrcAlgorithmID algo_id)
   encParamsLibMebo.bufOptimalSz = 600;
 }
 
-LibMeboRateController *
+[[nodiscard]] LibMeboRateController *
 LibmeboBrc_VP9::init(LibMeboRateController *libmebo_rc,
                       LibMeboRateControllerConfig *libmebo_rc_config) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
@@ -33,7 +33,7 @@ LibmeboBrc_VP9::init(LibMeboRateController *libmebo_rc,
   return libmebo_rc;
 }
 
-LibMeboStatus
+[[nodiscard]] LibMeboStatus
 LibmeboBrc_VP9::update_config(LibMeboRateController *rc,
                                LibMeboRateControllerConfig *rc_cfg) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
@@ -49,7 +49,7 @@ LibmeboBrc_VP9::update_config(LibMeboRateController *rc,
   return status;
 }
 
-LibMeboStatus LibmeboBrc_VP9::post_encode_update(LibMeboRateController *rc,
+[[nodiscard]] LibMeboStatus LibmeboBrc_VP9::post_encode_update(LibMeboRateController *rc,
                                                   uint64_t encoded_frame_size) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
 
@@ -63,7 +63,7 @@ LibMeboStatus LibmeboBrc_VP9::post_encode_update(LibMeboRateController *rc,
   return status;
 }
 
-LibMeboStatus
+[[nodiscard]]  LibMeboStatus
 LibmeboBrc_VP9::compute_qp(LibMeboRateController *rc,
                             LibMeboRCFrameParams *rc_frame_params) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
@@ -78,7 +78,7 @@ LibmeboBrc_VP9::compute_qp(LibMeboRateController *rc,
   return status;
 }
 
-LibMeboStatus LibmeboBrc_VP9::get_qp(LibMeboRateController *rc, int *qp) {
+[[nodiscard]] LibMeboStatus LibmeboBrc_VP9::get_qp(LibMeboRateController *rc, int *qp) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
 
   if (!rc)
@@ -91,7 +91,7 @@ LibMeboStatus LibmeboBrc_VP9::get_qp(LibMeboRateController *rc, int *qp) {
   return status;
 }
 
-LibMeboStatus LibmeboBrc_VP9::get_loop_filter_level(LibMeboRateController *rc,
+[[nodiscard]] LibMeboStatus LibmeboBrc_VP9::get_loop_filter_level(LibMeboRateController *rc,
                                                      int *filter_level) {
   LibMeboStatus status = LIBMEBO_STATUS_UNKNOWN;
 

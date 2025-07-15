@@ -4,8 +4,8 @@ extern "C" {
 #include "../lib/libmebo.hpp"
 }
 
-#define MaxSpatialLayers 3
-#define MaxTemporalLayers 3
+constexpr int MaxSpatialLayers  = 3;
+constexpr int MaxTemporalLayers = 3;
 
 struct EncParamsLibmebo {
   unsigned int preset;
@@ -28,7 +28,7 @@ public:
 
   virtual LibMeboRateController *
   init(LibMeboRateController *rc, LibMeboRateControllerConfig *rc_config) = 0;
-  virtual LibMeboStatus update_config(LibMeboRateController *rc,
+  [[nodiscard]] virtual LibMeboStatus update_config(LibMeboRateController *rc,
                                       LibMeboRateControllerConfig *rc_cfg) = 0;
   virtual LibMeboStatus post_encode_update(LibMeboRateController *rc,
                                            uint64_t encoded_frame_size) = 0;

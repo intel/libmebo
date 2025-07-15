@@ -1,9 +1,11 @@
 libmebo_sources = [
   'libmebo.cpp',
+  '../../libmebo_interface.cc',
 ]
 
 libmebo_headers = [
   'libmebo.hpp',
+  '../../libmebo_interface.h',
 ]
 
 install_headers ('libmebo.hpp', subdir : 'libmebo')
