@@ -162,17 +162,18 @@ public:
 
 
 [[nodiscard]] void* CreateInitLibmebo(const struct Av1InputParameters ips) {
-    try {
-        auto session = std::make_unique<LibmeboSession>(ips);
-        const int result = session->createController(ips);
-        if (result != kNoError) {
-            return nullptr;
-        }
-        return session.release(); // Transfer ownership to caller
-    } catch (const std::exception& e) {
-        std::cerr << "LibmeboSession creation failed: " << e.what() << std::endl;
+    auto session = std::make_unique<LibmeboSession>(ips);
+    if (!session) {
         return nullptr;
     }
+
+    const int result = session->createController(ips);
+    if (result != kNoError) {
+        return nullptr;
+    }
+    // Transfer ownership to caller
+    return session.release();
+
 }
 
 void DestroyLibmebo(void* session_handle) {
