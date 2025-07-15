@@ -6,7 +6,7 @@
 #include <functional>
 
 
-#ifdef LIBVA_UTILS
+#ifdef USE_LIBMEBO
 #include "av1encode.h"
 #endif
 

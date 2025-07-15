@@ -62,10 +62,10 @@ struct Av1InputParameters;  // Forward declaration when client provides it
 
 
 [[nodiscard]] void* CreateInitLibmebo(const struct Av1InputParameters ips) ;
-[[nodiscard]] void getLoopfilterfromRc(int lfdata[4]);
-[[nodiscard]] void post_encode_update(unsigned int consumed_bytes);
-[[nodiscard]] int getQPfromRatectrl(int current_frame_type);
-
+[[nodiscard]] void getLoopfilterfromRc(void *libmebo_session, int lfdata[4]);
+[[nodiscard]] void post_encode_update(void *libmebo_session, unsigned int consumed_bytes);
+[[nodiscard]] int getQPfromRatectrl(void *libmebo_session, int current_frame_type);
+void DestroyLibmebo(void* session_handle);
 typedef void *(*createLibmeboRateController_t)(LibMeboCodecType CodecType,
                                                LibMeboBrcAlgorithmID algo_id);
 typedef void *(*init_rate_controller_t)(LibMeboRateController *rc,
@@ -81,15 +81,15 @@ typedef LibMeboStatus (*get_qp_t)(LibMeboRateController *rc, int *qp);
 typedef LibMeboStatus (*get_loop_filter_level_t)(LibMeboRateController *rc,
                                                  int *filter_level);
 struct FunctionPtrstoLibmebo {
-  void *handle = nullptr;
-  LibMeboRateController *libmebo_brc = nullptr;
-  createLibmeboRateController_t ptrCreateLibmeboController = nullptr;
-  init_rate_controller_t ptrInit_rate_controller = nullptr;
-  update_rate_control_t ptrUpdate_rate_control = nullptr;
-  post_encode_update_t ptrPost_encode_update = nullptr;
-  compute_qp_t ptrCompute_qp = nullptr;
-  get_qp_t ptrGet_qp = nullptr;
-  get_loop_filter_level_t ptrGet_loop_filter_level = nullptr;
+  void *handle;
+  LibMeboRateController *libmebo_brc ;
+  createLibmeboRateController_t ptrCreateLibmeboController;
+  init_rate_controller_t ptrInit_rate_controller;
+  update_rate_control_t ptrUpdate_rate_control;
+  post_encode_update_t ptrPost_encode_update;
+  compute_qp_t ptrCompute_qp ;
+  get_qp_t ptrGet_qp ;
+  get_loop_filter_level_t ptrGet_loop_filter_level ;
 };
 
 
