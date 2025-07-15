@@ -16,7 +16,7 @@ int InitFuncPtrs(struct Av1InputParameters ips,
                  struct FunctionPtrstoLibmebo *pFnPtrsToLibmebo) {
   pFnPtrsToLibmebo->handle = dlopen(ips.libpath, RTLD_LAZY);
   if (!pFnPtrsToLibmebo->handle) {
-    std::cerr << "Cannot open the library libmebo.so\n";
+    std::cout << "Cannot open the library libmebo.so\n";
     return kMainHandleLibError;
   }
 
@@ -24,7 +24,7 @@ int InitFuncPtrs(struct Av1InputParameters ips,
       (createLibmeboRateController_t)dlsym(pFnPtrsToLibmebo->handle,
                                            "libmebo_create_rate_controller");
   if (!pFnPtrsToLibmebo->ptrCreateLibmeboController) {
-    std::cerr << "Cannot load symbol 'libmebo_create_rate_controller' from "
+    std::cout << "Cannot load symbol 'libmebo_create_rate_controller' from "
                  "Libmebo.so\n";
     return kLibMeboControllerSymbolError;
   }
@@ -32,7 +32,7 @@ int InitFuncPtrs(struct Av1InputParameters ips,
   pFnPtrsToLibmebo->ptrInit_rate_controller = (init_rate_controller_t)dlsym(
       pFnPtrsToLibmebo->handle, "libmebo_init_rate_controller");
   if (!pFnPtrsToLibmebo->ptrInit_rate_controller) {
-    std::cerr << "Cannot load symbol 'libmebo_init_rate_controller' from "
+    std::cout << "Cannot load symbol 'libmebo_init_rate_controller' from "
                  "Libmebo.so\n";
     return kInitRateControllerSymbolError;
   }
@@ -40,7 +40,7 @@ int InitFuncPtrs(struct Av1InputParameters ips,
   pFnPtrsToLibmebo->ptrUpdate_rate_control = (update_rate_control_t)dlsym(
       pFnPtrsToLibmebo->handle, "libmebo_update_rate_controller_config");
   if (!pFnPtrsToLibmebo->ptrInit_rate_controller) {
-    std::cerr << "Cannot load symbol 'libmebo_update_rate_controller_config' "
+    std::cout << "Cannot load symbol 'libmebo_update_rate_controller_config' "
                  "from Libmebo.so\n";
     return kUpdateRateControllerSymbolError;
   }
@@ -48,7 +48,7 @@ int InitFuncPtrs(struct Av1InputParameters ips,
   pFnPtrsToLibmebo->ptrPost_encode_update = (post_encode_update_t)dlsym(
       pFnPtrsToLibmebo->handle, "libmebo_post_encode_update");
   if (!pFnPtrsToLibmebo->ptrPost_encode_update) {
-    std::cerr
+    std::cout
         << "Cannot load symbol 'libmebo_post_encode_update' from Libmebo.so\n";
     return kPostEncodeSymbolSymbolError;
   }
@@ -56,21 +56,21 @@ int InitFuncPtrs(struct Av1InputParameters ips,
   pFnPtrsToLibmebo->ptrCompute_qp =
       (compute_qp_t)dlsym(pFnPtrsToLibmebo->handle, "libmebo_compute_qp");
   if (!pFnPtrsToLibmebo->ptrCompute_qp) {
-    std::cerr << "Cannot load symbol 'libmebo_compute_qp' from Libmebo.so\n";
+    std::cout << "Cannot load symbol 'libmebo_compute_qp' from Libmebo.so\n";
     return kComputeQpSybmolError;
   }
 
   pFnPtrsToLibmebo->ptrGet_qp =
       (get_qp_t)dlsym(pFnPtrsToLibmebo->handle, "libmebo_get_qp");
   if (!pFnPtrsToLibmebo->ptrGet_qp) {
-    std::cerr << "Cannot load symbol 'libmebo_get_qp' from Libmebo.so\n";
+    std::cout << "Cannot load symbol 'libmebo_get_qp' from Libmebo.so\n";
     return kGetQPSymbolError;
   }
 
   pFnPtrsToLibmebo->ptrGet_loop_filter_level = (get_loop_filter_level_t)dlsym(
       pFnPtrsToLibmebo->handle, "libmebo_get_loop_filter_level");
   if (!pFnPtrsToLibmebo->ptrGet_loop_filter_level) {
-    std::cerr << "Cannot load symbol 'libmebo_get_loop_filter_level' from "
+    std::cout << "Cannot load symbol 'libmebo_get_loop_filter_level' from "
                  "Libmebo.so\n";
     return kGetLoopFilterSymbolError;
   }
@@ -192,7 +192,7 @@ int CreateInitLibmebo(struct Av1InputParameters ips) {
   int result = InitFuncPtrs(ips, &FnPtrsToLibmebo);
 
   if (result != kNoError) {
-    std::cerr << " Cannot load lib or symbol, error code is " << result << "-"
+    std::cout << " Cannot load lib or symbol, error code is " << result << "-"
               << dlerror() << std::endl;
   }
 
@@ -204,7 +204,7 @@ int CreateInitLibmebo(struct Av1InputParameters ips) {
           CodecType, static_cast<LibMeboBrcAlgorithmID>(algo_id)));
 
   if (nullptr == libmebo_brc) {
-    std::cerr << "Libmebo_brc factory object creation failed \n";
+    std::cout << "Libmebo_brc factory object creation failed \n";
   }
 
   std::cout
@@ -230,7 +230,7 @@ int myfunc_test(struct Av1InputParameters ips) {
   int result = InitFuncPtrs(ips, &FnPtrsToLibmebo);
 
   if (result != kNoError) {
-    std::cerr << " Cannot load lib or symbol, error code is " << result << "-"
+    std::cout << " Cannot load lib or symbol, error code is " << result << "-"
               << dlerror() << std::endl;
   }
 
@@ -242,7 +242,7 @@ int myfunc_test(struct Av1InputParameters ips) {
           CodecType, static_cast<LibMeboBrcAlgorithmID>(algo_id)));
 
   if (nullptr == libmebo_brc) {
-    std::cerr << "Libmebo_brc factory object creation failed \n";
+    std::cout << "Libmebo_brc factory object creation failed \n";
   }
 
   std::cout
