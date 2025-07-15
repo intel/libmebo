@@ -128,7 +128,7 @@ public:
         
         const int result = InitFuncPtrs(ips, fnPtrs_.get());
         if (result != kNoError) {
-            throw std::runtime_error("Failed to initialize function pointers");
+            std::cout<<"Failed to initialize function pointers"<<std::endl;
         }
     }
 
