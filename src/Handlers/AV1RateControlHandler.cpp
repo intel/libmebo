@@ -100,31 +100,22 @@ LibmeboBrc_AV1::~LibmeboBrc_AV1() {
 [[nodiscard]] LibMeboRateController *
 LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
                      LibMeboRateControllerConfig *libMeboRCConfig) {
-  std::cout<<"Inside init of AV1 "<<std::endl;
   int result = InitSymbolsFromLibrary();
   if (result != kNoError_AV1) {
     return nullptr;
   }
-  std::cout<<"Inside init of AV1 -2 "<<std::endl;
   libMeboRC = LibMeboBrc::init(libMeboRC, libMeboRCConfig);
-  std::cout<<"Inside init of AV1 -3"<<std::endl;
   rcConfig = (AomAV1RateControlRtcConfig *)aligned_alloc(
       alignof(AomAV1RateControlRtcConfig), sizeof(AomAV1RateControlRtcConfig));
-
   if (rcConfig == nullptr) {
     return nullptr;
   }
-  
-    rcConfig = {0};
-  //memset(rcConfig, 0, sizeof(AomAV1RateControlRtcConfig));
-
+   //memset(rcConfig, 0, sizeof(AomAV1RateControlRtcConfig));
   ptrInitConfigFunc(rcConfig);
 
   controller = ptrCreateAV1Controller(rcConfig);
-  std::cout<<"Inside init of AV1 -4"<<std::endl;
   if (controller == nullptr)
     return nullptr;
-  std::cout<<"Inside init of AV1 -5"<<std::endl;
   return libMeboRC;
 }
 
