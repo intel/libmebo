@@ -28,6 +28,7 @@ libmebo_create_rate_controller(LibMeboCodecType CodecType,
                                LibMeboBrcAlgorithmID algo_id) {
   std::unique_ptr<LibMeboBrc> brc =
       Libmebo_brc_factory::create(static_cast<LibMeboBrcAlgorithmID>(algo_id));
+  std::cout<<"libmebo_create_rate_controller called with algo_id: " << algo_id << std::endl;
   if (!brc)
     return nullptr;
   LibMeboRateController *libmebo_rc = static_cast<LibMeboRateController *>(
@@ -39,6 +40,7 @@ libmebo_create_rate_controller(LibMeboCodecType CodecType,
   libmebo_rc->priv = brc.release();
   libmebo_rc->codec_type =
       static_cast<LibMeboCodecType>(CodecType); // later change
+  std::cout<<"libmebo_create_rate_controller: codec_type set to , now returning..." << libmebo_rc->codec_type << std::endl;
   return libmebo_rc;
 }
 void libmebo_release_rate_controller(LibMeboRateController *rc) {

@@ -74,6 +74,7 @@ int InitFuncPtrs(struct Av1InputParameters ips,
                  "Libmebo.so\n";
     return kGetLoopFilterSymbolError;
   }
+  std::cout << "All symbols from libmebo.so loaded successfully\n";
   return kNoError;
 }
 
@@ -164,6 +165,7 @@ public:
 [[nodiscard]] void* CreateInitLibmebo(const struct Av1InputParameters ips) {
     auto session = std::make_unique<LibmeboSession>(ips);
     if (!session) {
+        std::cout<<"session didnt create\n";
         return nullptr;
     }
 

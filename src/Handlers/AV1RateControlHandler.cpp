@@ -121,8 +121,10 @@ LibmeboBrc_AV1::init(LibMeboRateController *libMeboRC,
   ptrInitConfigFunc(rcConfig);
 
   controller = ptrCreateAV1Controller(rcConfig);
+  std::cout<<"Inside init of AV1 -4"<<std::endl;
   if (controller == nullptr)
     return nullptr;
+  std::cout<<"Inside init of AV1 -5"<<std::endl;
   return libMeboRC;
 }
 
