@@ -1,4 +1,4 @@
-project('LibMebo', 'c',
+project('LibMebo', ['c' , 'cpp'],
   version : '0.1.0.1',
   meson_version : '>= 0.49',
   default_options: [ 'warning_level=2',

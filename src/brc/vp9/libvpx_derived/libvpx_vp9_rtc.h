@@ -14,7 +14,7 @@
 #define LIBMEBO_VP9_RATECTRL_RTC_H
 
 #include "libvpx_vp9_common.h"
-#include "../../../lib/libmebo.h"
+#include "../../../lib/libmebo.hpp"
 
 typedef struct _VP9FrameParamsQpRTC {
   FRAME_TYPE frame_type;
