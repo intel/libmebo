@@ -15,7 +15,7 @@
 #define LIBMEBO_AV1_RATECTRL_RTC_H
 
 #include "aom_av1_common.h"
-#include "../../../lib/libmebo.h"
+#include "../../../lib/libmebo.hpp"
 
 // This interface allows using AV1 real-time rate control without initializing
 // the encoder.

@@ -55,6 +55,7 @@ libbrc  = static_library('libbrc',
   libbrc_sources  + libbrc_headers,
   c_args : libmebo_args,
   include_directories: [configinc, libbrcinc],
+  install:true
 )
 
 libbrc_dep = declare_dependency (link_with: libbrc,
