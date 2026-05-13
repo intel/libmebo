@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <libmebo.h>
+#include <libmebo.hpp>
 #include <getopt.h>
 #include <stdlib.h>
 #include <time.h>

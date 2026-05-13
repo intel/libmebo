@@ -1,18 +1,18 @@
 libmebo_sources = [
-  'libmebo.c',
+  'libmebo.cpp',
 ]
 
 libmebo_headers = [
-  'libmebo.h',
+  'libmebo.hpp',
 ]
 
-install_headers ('libmebo.h', subdir : 'libmebo')
+install_headers ('libmebo.hpp', subdir : 'libmebo')
 
 libmebo  = shared_library('mebo',
   libmebo_sources,
   c_args : libmebo_args,
   include_directories: [configinc, libbrcinc],
-  dependencies: [libbrc_dep],
+  dependencies: [libbrc_dep , libbrc_controller_dep],
   version : libmebo_soname_version,
   soversion : libmebo_version_major,
   install : true,
@@ -20,7 +20,7 @@ libmebo  = shared_library('mebo',
 
 libmebo_dep_internal = declare_dependency(link_with: libmebo,
   include_directories : [configinc, libbrcinc],
-  dependencies : [libbrc_dep])
+  dependencies : [libbrc_dep, libbrc_controller_dep])
 
 pkgconfig.generate(
   name : 'libmebo',
